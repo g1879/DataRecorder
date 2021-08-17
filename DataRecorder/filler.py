@@ -18,7 +18,8 @@ class Filler(BaseRecorder):
                  key_cols: Union[str, int, list, tuple] = 1,
                  begin_row: int = 2,
                  sign_col: Union[str, int] = 2,
-                 sign: str = None):
+                 sign: str = None,
+                 data_col: int = None):
         """初始化                                  \n
         :param file_path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
@@ -26,12 +27,14 @@ class Filler(BaseRecorder):
         :param begin_row:
         :param sign_col:
         :param sign:
+        :param data_col:
         """
         super().__init__(file_path, cache_size)
         self.key_cols = key_cols
         self.begin_row = begin_row
         self.sign_col = sign_col
         self.sign = sign
+        self.data_col = data_col or sign_col
 
     def set_file_path(self, path: Union[str, Path], key_cols: Union[str, int, list, tuple]):
         if not Path(path).exists():
@@ -114,7 +117,8 @@ class Filler(BaseRecorder):
 
             if length == 2 and isinstance(d[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 d1 = list(d[1].values()) if isinstance(d[1], dict) else list(d[1:])
-                d = [d[0]].extend(d1)
+                d = [d[0]]
+                d.extend(d1)
 
             new_data.append(d)
 
@@ -129,7 +133,7 @@ class Filler(BaseRecorder):
             return
 
         if self.file_type == 'xlsx':
-            col = self.sign_col if isinstance(self.sign_col, int) else column_index_from_string(self.sign_col)
+            col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
             _fill_to_xlsx(self.file_path, self._data, self._before, self._after, col)
 
         self._data = []
