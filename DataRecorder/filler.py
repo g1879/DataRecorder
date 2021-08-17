@@ -10,21 +10,28 @@ from .functions import _data_to_list
 
 
 class Filler(BaseRecorder):
+    """Filler类用于根据现有文件中的关键字向文件填充数据"""
     SUPPORTS = ('xlsx',)
 
     def __init__(self, file_path: Union[str, Path],
                  cache_size: int = 50,
                  key_cols: Union[str, int, list, tuple] = 1,
                  begin_row: int = 2,
-                 sign_col: Union[str, int] = 2):
+                 sign_col: Union[str, int] = 2,
+                 sign: str = None):
         """初始化                                  \n
         :param file_path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
+        :param key_cols:
+        :param begin_row:
+        :param sign_col:
+        :param sign:
         """
         super().__init__(file_path, cache_size)
         self.key_cols = key_cols
         self.begin_row = begin_row
         self.sign_col = sign_col
+        self.sign = sign
 
     def set_file_path(self, path: Union[str, Path], key_cols: Union[str, int, list, tuple]):
         if not Path(path).exists():
@@ -72,7 +79,7 @@ class Filler(BaseRecorder):
         keys = []
         for row in range(self.begin_row, ws.max_row + 1):
             sign_col = self.sign_col if isinstance(self.sign_col, int) else column_index_from_string(self.sign_col)
-            if ws.cell(row, sign_col).value is not None:
+            if ws.cell(row, sign_col).value == self.sign:
                 continue
 
             key = [row]
