@@ -3,8 +3,8 @@ from csv import writer
 from pathlib import Path
 from typing import Union
 
-from functions import _data_to_list, _data_to_list_or_dict
 from base import BaseRecorder
+from functions import _data_to_list, _data_to_list_or_dict
 
 
 class Recorder(BaseRecorder):
@@ -73,8 +73,8 @@ class Recorder(BaseRecorder):
 
 def _record_to_xlsx(file_path: str,
                     data: list,
-                    before: Union[list, dict] = None,
-                    after: Union[list, dict] = None) -> None:
+                    before: Union[list, tuple, dict] = None,
+                    after: Union[list, tuple, dict] = None) -> None:
     """记录数据到xlsx文件            \n
     :param file_path: 文件路径
     :param data: 要记录的数据
