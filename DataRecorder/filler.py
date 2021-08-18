@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import Union
 
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 
@@ -177,22 +178,15 @@ def _get_xlsx_keys(path, begin_row, sign_col, sign, key_cols) -> list:
     """返回key列内容，第一位为行号，其余为key列的值  \n
     eg.[3, '名称', 'id']
     """
-    wb = load_workbook(path, read_only=True)
-    ws = wb.active
-
-    keys = []
-    for row in range(begin_row, ws.max_row + 1):
-        sign_col = sign_col if isinstance(sign_col, int) else column_index_from_string(sign_col)
-        if ws.cell(row, sign_col).value == sign:
-            key = [row]
-            for col in key_cols:
-                col = col if isinstance(col, int) else column_index_from_string(col)
-                key.append(ws.cell(row, col).value)
-
-            keys.append(key)
-
-    wb.close()
-    return keys
+    key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
+    sign_col -= 1
+    begin_row = begin_row or 1
+    key_cols.append(sign_col)
+    df = pd.read_excel(path, header=None, usecols=key_cols, skiprows=begin_row - 1)
+    df = df[df[sign_col].isna()] if sign is None else df[df[sign_col] == sign]
+    del df[sign_col]
+    df.index += begin_row
+    return [list(i) for i in df.itertuples()]
 
 
 def _fill_to_xlsx(file_path: str,
