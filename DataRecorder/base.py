@@ -7,22 +7,22 @@ from typing import Union
 class BaseRecorder(object):
     SUPPORTS = ()
 
-    def __init__(self, file_path: Union[str, Path], cache_size: int = 50):
+    def __init__(self, path: Union[str, Path], cache_size: int = 50):
         """初始化                                  \n
-        :param file_path: 保存的文件路径
+        :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
         """
         self._data = []
         self._before = []
         self._after = []
-        self._file_type = None
-        self.file_path = file_path
+        self._type = None
+        self.path = path
         self.cache_size = cache_size
         self.encoding: str = 'utf-8'
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""
-        if not self.file_path.endswith('.xlsx'):
+        if not self.path.endswith('.xlsx'):
             self.record()
 
     @property
@@ -36,37 +36,37 @@ class BaseRecorder(object):
         :param cache_size: 缓存大小
         :return: None
         """
-        if not isinstance(cache_size, int):
-            raise TypeError('参数cache_size只能为int。')
+        if not isinstance(cache_size, int) or cache_size < 1:
+            raise TypeError('cache_size值只能是int，且必须大于0')
         self._cache = cache_size
 
     @property
-    def file_path(self) -> str:
+    def path(self) -> str:
         """返回文件路径"""
-        return self._file_path
+        return self._path
 
-    @file_path.setter
-    def file_path(self, path: Path[str, Path]) -> None:
+    @path.setter
+    def path(self, path: Path[str, Path]) -> None:
         """设置文件路径                \n
         :param path: 文件路径
         :return: None
         """
         if isinstance(path, str):
-            self._file_type = path.split('.')[-1]
+            self._type = path.split('.')[-1]
         elif isinstance(path, Path):
-            self._file_type = path.suffix[1:]
+            self._type = path.suffix[1:]
         else:
             raise TypeError(f'参数file_path只能是str或Path，非{type(path)}。')
 
-        if self._file_type not in self.SUPPORTS:
+        if self._type not in self.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')
 
         self.record()  # 更换文件前自动记录剩余数据
-        self._file_path = str(path)
+        self._path = str(path) if isinstance(path, Path) else path
 
     @property
-    def file_type(self) -> str:
-        return self._file_type
+    def type(self) -> str:
+        return self._type
 
     def set_before(self, before: Union[list, tuple, str, dict]) -> None:
         """设置在数据前面补充的列                              \n

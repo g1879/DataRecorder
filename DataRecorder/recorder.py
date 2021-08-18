@@ -3,8 +3,8 @@ from csv import writer
 from pathlib import Path
 from typing import Union
 
-from base import BaseRecorder
-from functions import _data_to_list, _data_to_list_or_dict
+from .base import BaseRecorder
+from .functions import _data_to_list, _data_to_list_or_dict
 
 
 class Recorder(BaseRecorder):
@@ -13,18 +13,20 @@ class Recorder(BaseRecorder):
     """
     SUPPORTS = ('xlsx', 'csv', 'json', 'txt')
 
-    def __init__(self, file_path: Union[str, Path], cache_size: int = 50):
+    def __init__(self, path: Union[str, Path], cache_size: int = 50):
         """初始化                                  \n
-        :param file_path: 保存的文件路径
+        :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
         """
-        super().__init__(file_path, cache_size)
+        super().__init__(path, cache_size)
 
-    def add_data(self, data: Union[list, tuple, dict]) -> None:
+    def add_data(self, data: Union[list, tuple, dict, int, float, str]) -> None:
         """添加数据，可一次添加多条数据                            \n
         :param data: 插入的数据，元组或列表
         :return: None
         """
+        if not isinstance(data, (list, tuple, dict)):
+            data = (data,)
         if data and (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) \
                 or isinstance(data, dict):
             self._data.append(data)
@@ -39,20 +41,20 @@ class Recorder(BaseRecorder):
         if not self._data:
             return
 
-        f = Path(self.file_path)
+        f = Path(self.path)
         f.parent.mkdir(parents=True, exist_ok=True)
 
-        if self.file_type == 'xlsx':
-            _record_to_xlsx(self.file_path, self._data, self._before, self._after)
+        if self.type == 'xlsx':
+            _record_to_xlsx(self.path, self._data, self._before, self._after)
 
-        elif self.file_type == 'csv':
-            _record_to_csv(self.file_path, self._data, self._before, self._after, self.encoding)
+        elif self.type == 'csv':
+            _record_to_csv(self.path, self._data, self._before, self._after, self.encoding)
 
-        elif self.file_type == 'txt':
-            _record_to_txt(self.file_path, self._data, self._before, self._after, self.encoding)
+        elif self.type == 'txt':
+            _record_to_txt(self.path, self._data, self._before, self._after, self.encoding)
 
-        elif self.file_type == 'json':
-            _record_to_json(self.file_path, self._data, self._before, self._after, self.encoding)
+        elif self.type == 'json':
+            _record_to_json(self.path, self._data, self._before, self._after, self.encoding)
 
         self._data = []
 
@@ -61,11 +63,11 @@ class Recorder(BaseRecorder):
         :param head: 表头，列表或元组
         :return: None
         """
-        if self.file_type == 'xlsx':
-            _set_xlsx_head(self.file_path, head)
+        if self.type == 'xlsx':
+            _set_xlsx_head(self.path, head)
 
-        elif self.file_type == 'csv':
-            _set_csv_head(self.file_path, head, self.encoding)
+        elif self.type == 'csv':
+            _set_csv_head(self.path, head, self.encoding)
 
         else:
             raise TypeError('只能对xlsx和csv文件设置表头。')
@@ -258,5 +260,3 @@ def _get_title(data: Union[list, dict],
             return_list.extend([''])
 
     return return_list
-
-
