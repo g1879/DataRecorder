@@ -62,7 +62,7 @@ class Filler(BaseRecorder):
         self.__init__(path, self.cache_size, key_cols, begin_row, sign_col, sign, data_col)
 
     @property
-    def key_cols(self) -> Union[str, int, list, tuple]:
+    def key_cols(self) -> Union[list, tuple]:
         """返回作为关键字的列或列的集合"""
         return self._key_cols
 
@@ -176,9 +176,19 @@ class Filler(BaseRecorder):
         self.record()
 
 
-def _get_keys(path, begin_row, sign_col, sign, key_cols) -> list:
-    """返回key列内容，第一位为行号，其余为key列的值  \n
+def _get_keys(path: str,
+              begin_row: int,
+              sign_col: int,
+              sign: str,
+              key_cols: Union[list, tuple]) -> list:
+    """返回key列内容，第一位为行号，其余为key列的值    \n
     eg.[3, '名称', 'id']
+    :param path: 文件路径
+    :param begin_row: 数据起始行
+    :param sign_col: 用于判断是否已填数据的列，从1开始
+    :param sign: 按这个值判断是否已填数据
+    :param key_cols: 关键字所在列，可以是多列
+    :return: 关键字组成的列表
     """
     key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
     sign_col -= 1
