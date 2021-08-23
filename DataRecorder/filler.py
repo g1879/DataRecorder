@@ -12,7 +12,7 @@ from .functions import _data_to_list
 
 class Filler(BaseRecorder):
     """Filler类用于根据现有文件中的关键字向文件填充数据"""
-    SUPPORTS = ('xlsx',)
+    SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self,
                  path: Union[str, Path],
@@ -109,8 +109,8 @@ class Filler(BaseRecorder):
         """返回key列内容，第一位为行号，其余为key列的值  \n
         eg.[3, '名称', 'id']
         """
-        if self.type == 'xlsx':
-            return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
+        if self.type in ('xlsx', 'csv'):
+            return _get_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
 
     def add_data(self, data: Union[list, tuple, dict]) -> None:
         """添加数据                                                                   \n
@@ -154,9 +154,11 @@ class Filler(BaseRecorder):
         if not self._data:
             return
 
+        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
         if self.type == 'xlsx':
-            col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
             _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
+        elif self.type == 'csv':
+            _fill_to_csv(self.path, self._data, self._before, self._after, col)
 
         self._data = []
 
@@ -174,18 +176,26 @@ class Filler(BaseRecorder):
         self.record()
 
 
-def _get_xlsx_keys(path, begin_row, sign_col, sign, key_cols) -> list:
+def _get_keys(path, begin_row, sign_col, sign, key_cols) -> list:
     """返回key列内容，第一位为行号，其余为key列的值  \n
     eg.[3, '名称', 'id']
     """
     key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
     sign_col -= 1
     begin_row = begin_row or 1
-    key_cols.append(sign_col)
-    df = pd.read_excel(path, header=None, usecols=key_cols, skiprows=begin_row - 1)
-    df = df[df[sign_col].isna()] if sign is None else df[df[sign_col] == sign]
-    del df[sign_col]
+
+    if path.endswith('xlsx'):
+        df = pd.read_excel(path, header=None, skiprows=begin_row - 1)
+    elif path.endswith('csv'):
+        df = pd.read_csv(path, header=None, skiprows=begin_row - 1)
+    else:
+        raise TypeError('只支持xlsx和csv格式。')
+
+    if sign_col <= df.shape[1]:
+        df = df[df[sign_col].isna()] if sign is None else df[df[sign_col] == sign]
+    df = df[key_cols]
     df.index += begin_row
+    df = df.where(df.notnull(), None)
     return [list(i) for i in df.itertuples()]
 
 
@@ -211,3 +221,32 @@ def _fill_to_xlsx(file_path: str,
 
     wb.save(file_path)
     wb.close()
+
+
+def _fill_to_csv(file_path: str,
+                 data: Union[list, tuple],
+                 before: Union[list, dict] = None,
+                 after: Union[list, dict] = None,
+                 col: int = None) -> None:
+    """填写数据到xlsx文件            \n
+    :param file_path: 文件路径
+    :param data: 要记录的数据
+    :param before: 数据前面的列
+    :param after: 数据后面的列
+    :param col: 开始记录的列号
+    :return: None
+    """
+    df = pd.read_csv(file_path, header=None)
+    df = df.where(df.notnull(), None)
+    df_width = df.shape[1]
+    full_width = col + len(data[0])
+
+    if full_width > df_width:
+        for i in range(full_width - df_width - 2):
+            df[df_width + i] = None
+
+    for i in data:
+        for k, j in enumerate(_data_to_list(i[1:], before, after)):
+            df.loc[i[0] - 1, col + k - 1] = j
+
+    df.to_csv(file_path, header=False, index=False)
