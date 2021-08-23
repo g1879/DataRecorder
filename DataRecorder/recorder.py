@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-from csv import writer
 from pathlib import Path
 from typing import Union
 
@@ -124,7 +123,7 @@ def _record_to_csv(file_path: str,
     :param encoding: 编码
     :return: None
     """
-
+    from csv import writer
     exists = True if Path(file_path).exists() else False
 
     with open(file_path, 'a+', newline='', encoding=encoding) as f:
@@ -170,11 +169,11 @@ def _record_to_json(file_path: str,
     :param encoding: 编码
     :return: None
     """
-    import json
+    from json import load, dump
 
     if Path(file_path).exists():
         with open(file_path, 'r', encoding=encoding) as f:
-            json_data = json.load(f)
+            json_data = load(f)
 
         for i in data:
             i = _data_to_list_or_dict(i, before, after)
@@ -184,7 +183,7 @@ def _record_to_json(file_path: str,
         json_data = [_data_to_list_or_dict(i, before, after) for i in data]
 
     with open(file_path, 'w', encoding=encoding) as f:
-        json.dump(json_data, f)
+        dump(json_data, f)
 
 
 def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
