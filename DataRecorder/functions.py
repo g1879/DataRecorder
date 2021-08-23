@@ -11,12 +11,12 @@ def _data_to_list(data: Union[list, tuple, dict],
     :return: 转变成列表方式的数据
     """
     return_list = []
-    if not isinstance(data, (list, tuple, dict)):
+    if data is not None and not isinstance(data, (list, tuple, dict)):
         data = [data]
-    if not isinstance(before, (list, tuple, dict)):
-        data = [before]
-    if not isinstance(after, (list, tuple, dict)):
-        data = [after]
+    if before is not None and not isinstance(before, (list, tuple, dict)):
+        before = [before]
+    if after is not None and not isinstance(after, (list, tuple, dict)):
+        after = [after]
 
     for i in (before, data, after):
         if isinstance(i, dict):

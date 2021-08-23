@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 
 import pandas as pd
 from openpyxl import load_workbook
@@ -180,8 +180,8 @@ def _get_keys(path: str,
               begin_row: int,
               sign_col: int,
               sign: str,
-              key_cols: Union[list, tuple]) -> list:
-    """返回key列内容，第一位为行号，其余为key列的值    \n
+              key_cols: Union[list, tuple]) -> List[list]:
+    """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
     :param begin_row: 数据起始行
@@ -251,9 +251,8 @@ def _fill_to_csv(file_path: str,
     df_width = df.shape[1]
     full_width = col + len(data[0])
 
-    if full_width > df_width:
-        for i in range(full_width - df_width - 2):
-            df[df_width + i] = None
+    for i in range(full_width - df_width - 2):
+        df[df_width + i] = None
 
     for i in data:
         for k, j in enumerate(_data_to_list(i[1:], before, after)):

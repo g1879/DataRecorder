@@ -124,12 +124,10 @@ def _record_to_csv(file_path: str,
     :return: None
     """
     from csv import writer
-    exists = True if Path(file_path).exists() else False
-
     with open(file_path, 'a+', newline='', encoding=encoding) as f:
         csv_write = writer(f)
 
-        if not exists:
+        if not Path(file_path).exists():
             title = _get_title(data[0], before, after)
             if title:
                 csv_write.writerow(title)
