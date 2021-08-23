@@ -2,9 +2,9 @@
 from pathlib import Path
 from typing import Union, List
 
-import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
+from pandas import read_excel, read_csv
 
 from .base import BaseRecorder
 from .functions import _data_to_list
@@ -195,9 +195,9 @@ def _get_keys(path: str,
     begin_row = begin_row or 1
 
     if path.endswith('xlsx'):
-        df = pd.read_excel(path, header=None, skiprows=begin_row - 1)
+        df = read_excel(path, header=None, skiprows=begin_row - 1)
     elif path.endswith('csv'):
-        df = pd.read_csv(path, header=None, skiprows=begin_row - 1)
+        df = read_csv(path, header=None, skiprows=begin_row - 1)
     else:
         raise TypeError('只支持xlsx和csv格式。')
 
