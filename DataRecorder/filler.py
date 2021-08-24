@@ -21,7 +21,7 @@ class Filler(BaseRecorder):
                  begin_row: int = 2,
                  sign_col: Union[str, int] = 2,
                  sign: str = None,
-                 data_col: int = None):
+                 data_col: Union[int, str] = None):
         """初始化                                            \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
@@ -178,7 +178,7 @@ class Filler(BaseRecorder):
 
 def _get_keys(path: str,
               begin_row: int,
-              sign_col: int,
+              sign_col: Union[int, str],
               sign: str,
               key_cols: Union[list, tuple]) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
@@ -191,6 +191,9 @@ def _get_keys(path: str,
     :return: 关键字组成的列表
     """
     key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
+    if isinstance(sign_col, str):
+        sign_col = column_index_from_string(sign_col)
+
     sign_col -= 1
     begin_row = begin_row or 1
 
@@ -246,15 +249,20 @@ def _fill_to_csv(file_path: str,
     :param col: 开始记录的列号
     :return: None
     """
-    df = pd.read_csv(file_path, header=None)
+    df = read_csv(file_path, header=None)
     df = df.where(df.notnull(), None)
     df_width = df.shape[1]
     full_width = col + len(data[0])
 
+    # 若要填充的列号大于表格宽度，先填充无数据列
     for i in range(full_width - df_width - 2):
         df[df_width + i] = None
 
     for i in data:
+        # 若要填充的行大于表格高度，先填充无数据列
+        for _ in range(i[0] - df.shape[0]):
+            df.loc[df.shape[0], :] = None
+
         for k, j in enumerate(_data_to_list(i[1:], before, after)):
             df.loc[i[0] - 1, col + k - 1] = j
 
