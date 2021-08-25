@@ -4,6 +4,7 @@ from typing import Union, List
 
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
+from openpyxl.utils.cell import coordinate_from_string
 from pandas import read_excel, read_csv
 
 from .base import BaseRecorder
@@ -129,8 +130,8 @@ class Filler(BaseRecorder):
                 item = list(item.values())
 
             length = len(item)
-            if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], (int, tuple)):
-                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）或tuple（行列）。')
+            if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], (int, tuple, str)):
+                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）、str或tuple（行列）。')
 
             if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 if isinstance(item[1], dict):
@@ -230,7 +231,14 @@ def _fill_to_xlsx(file_path: str,
 
     for i in data:
         for key, j in enumerate(_data_to_list(i[1:], before, after)):
-            ws.cell(i[0], col + key).value = j
+            if isinstance(i[0], int):  # 行号
+                ws.cell(i[0], col + key).value = j
+            elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
+                ws.cell(i[0][0], i[0][1]).value = j
+            elif isinstance(i[0], str):  # 坐标 如'A8'
+                ws[i[0]].value = j
+            else:
+                raise TypeError('数据第一位必须是int（行号）或tuple（行列）')
 
     wb.save(file_path)
     wb.close()
@@ -264,6 +272,17 @@ def _fill_to_csv(file_path: str,
             df.loc[df.shape[0], :] = None
 
         for k, j in enumerate(_data_to_list(i[1:], before, after)):
-            df.loc[i[0] - 1, col + k - 1] = j
+            if isinstance(i[0], int):  # 行号
+                df.loc[i[0] - 1, col + k - 1] = j
+            elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
+                # TODO: 测试
+                df.loc[i[0][0] - 1, i[0][1] + k - 1] = j
+            elif isinstance(i[0], str):  # 坐标 如'A8'
+                # TODO: 测试
+                xy = coordinate_from_string(i[0])
+                x = column_index_from_string(xy[0])
+                df.loc[x - 1, xy[1] + k - 1] = j
+            else:
+                raise TypeError('数据第一位必须是int（行号）或tuple（行列）')
 
     df.to_csv(file_path, header=False, index=False)
