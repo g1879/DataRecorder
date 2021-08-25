@@ -36,8 +36,8 @@ class BaseRecorder(object):
         :param cache_size: 缓存大小
         :return: None
         """
-        if not isinstance(cache_size, int) or cache_size < 1:
-            raise TypeError('cache_size值只能是int，且必须大于0')
+        if not isinstance(cache_size, int) or cache_size < 0:
+            raise TypeError('cache_size值只能是int，且必须>=0')
         self._cache = cache_size
 
     @property

@@ -14,10 +14,10 @@ class Recorder(BaseRecorder):
     """
     SUPPORTS = ('xlsx', 'csv', 'json', 'txt')
 
-    def __init__(self, path: Union[str, Path], cache_size: int = 50):
-        """初始化                                  \n
+    def __init__(self, path: Union[str, Path] = None, cache_size: int = 50):
+        """初始化                                                   \n
         :param path: 保存的文件路径
-        :param cache_size: 每接收多少条记录写入文件
+        :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保持
         """
         super().__init__(path, cache_size)
 
@@ -34,7 +34,7 @@ class Recorder(BaseRecorder):
         else:
             self._data.extend(data)
 
-        if self.cache_size is not None and len(self._data) >= self.cache_size:
+        if 0 < self.cache_size <= len(self._data):
             self.record()
 
     def record(self) -> None:

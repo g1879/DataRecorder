@@ -23,9 +23,9 @@ class Filler(BaseRecorder):
                  sign_col: Union[str, int] = 2,
                  sign: str = None,
                  data_col: Union[int, str] = None):
-        """初始化                                            \n
+        """初始化                                                  \n
         :param path: 保存的文件路径
-        :param cache_size: 每接收多少条记录写入文件
+        :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始
         :param begin_row: 数据开始的行，默认表头一行
         :param sign_col: 用于判断是否已填数据的列，从1开始
@@ -147,7 +147,7 @@ class Filler(BaseRecorder):
 
         self._data.extend(new_data)
 
-        if self.cache_size is not None and len(self._data) >= self.cache_size:
+        if 0 < self.cache_size <= len(self._data):
             self.record()
 
     def record(self) -> None:
@@ -210,6 +210,7 @@ def _get_keys(path: str,
     df = df[key_cols]
     df.index += begin_row
     df = df.where(df.notnull(), None)
+
     return [list(i) for i in df.itertuples()]
 
 
@@ -238,7 +239,7 @@ def _fill_to_xlsx(file_path: str,
             elif isinstance(i[0], str):  # 坐标 如'A8'
                 ws[i[0]].value = j
             else:
-                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）')
+                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）。')
 
     wb.save(file_path)
     wb.close()
@@ -259,30 +260,32 @@ def _fill_to_csv(file_path: str,
     """
     df = read_csv(file_path, header=None)
     df = df.where(df.notnull(), None)
-    df_width = df.shape[1]
-    full_width = col + len(data[0])
-
-    # 若要填充的列号大于表格宽度，先填充无数据列
-    for i in range(full_width - df_width - 2):
-        df[df_width + i] = None
 
     for i in data:
-        # 若要填充的行大于表格高度，先填充无数据列
-        for _ in range(i[0] - df.shape[0]):
+        if isinstance(i[0], int):  # 行号
+            row = i[0]
+        elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
+            row = i[0][0]
+            col = i[0][1]
+        elif isinstance(i[0], str):  # 坐标 如'A8'
+            xy = coordinate_from_string(i[0])
+            col = column_index_from_string(xy[0])
+            row = xy[1]
+        else:
+            raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）。')
+
+        df_width = df.shape[1]
+        full_width = col + len(i) - 1
+
+        # 若要填充的列号大于表格宽度，先填充无数据列
+        for j in range(full_width - df_width - 2):
+            df[df_width + j] = None
+
+        # 若要填充的行大于表格高度，先填充无数据行
+        for _ in range(row - df.shape[0]):
             df.loc[df.shape[0], :] = None
 
         for k, j in enumerate(_data_to_list(i[1:], before, after)):
-            if isinstance(i[0], int):  # 行号
-                df.loc[i[0] - 1, col + k - 1] = j
-            elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
-                # TODO: 测试
-                df.loc[i[0][0] - 1, i[0][1] + k - 1] = j
-            elif isinstance(i[0], str):  # 坐标 如'A8'
-                # TODO: 测试
-                xy = coordinate_from_string(i[0])
-                x = column_index_from_string(xy[0])
-                df.loc[x - 1, xy[1] + k - 1] = j
-            else:
-                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）')
+            df.loc[row - 1, col + k - 1] = j
 
     df.to_csv(file_path, header=False, index=False)
