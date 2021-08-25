@@ -131,7 +131,7 @@ class Filler(BaseRecorder):
 
             length = len(item)
             if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], (int, tuple, str)):
-                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）、str或tuple（行列）。')
+                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）、str（坐标）或tuple（行列）。')
 
             if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 if isinstance(item[1], dict):
@@ -238,7 +238,7 @@ def _fill_to_xlsx(file_path: str,
             elif isinstance(i[0], str):  # 坐标 如'A8'
                 ws[i[0]].value = j
             else:
-                raise TypeError('数据第一位必须是int（行号）或tuple（行列）')
+                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）')
 
     wb.save(file_path)
     wb.close()
@@ -283,6 +283,6 @@ def _fill_to_csv(file_path: str,
                 x = column_index_from_string(xy[0])
                 df.loc[x - 1, xy[1] + k - 1] = j
             else:
-                raise TypeError('数据第一位必须是int（行号）或tuple（行列）')
+                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）')
 
     df.to_csv(file_path, header=False, index=False)
