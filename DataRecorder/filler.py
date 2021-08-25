@@ -129,8 +129,8 @@ class Filler(BaseRecorder):
                 item = list(item.values())
 
             length = len(item)
-            if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], int):
-                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int代表行号。')
+            if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], (int, tuple)):
+                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）或tuple（行列）。')
 
             if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 if isinstance(item[1], dict):
@@ -146,7 +146,7 @@ class Filler(BaseRecorder):
 
         self._data.extend(new_data)
 
-        if len(self._data) >= self.cache_size:
+        if self.cache_size is not None and len(self._data) >= self.cache_size:
             self.record()
 
     def record(self) -> None:
@@ -171,7 +171,7 @@ class Filler(BaseRecorder):
         """
         for i in self.keys:
             print(i)
-            res = [i[0], func(i[1:], *args)]
+            res = [i[0], func(i, *args)]
             self.add_data(res)
         self.record()
 

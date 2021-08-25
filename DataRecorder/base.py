@@ -46,7 +46,7 @@ class BaseRecorder(object):
         return self._path
 
     @path.setter
-    def path(self, path: Path[str, Path]) -> None:
+    def path(self, path: Union[str, Path]) -> None:
         """设置文件路径                \n
         :param path: 文件路径
         :return: None

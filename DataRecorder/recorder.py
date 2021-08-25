@@ -2,6 +2,8 @@
 from pathlib import Path
 from typing import Union
 
+from openpyxl import Workbook, load_workbook
+
 from .base import BaseRecorder
 from .functions import _data_to_list, _data_to_list_or_dict
 
@@ -32,7 +34,7 @@ class Recorder(BaseRecorder):
         else:
             self._data.extend(data)
 
-        if len(self._data) >= self.cache_size:
+        if self.cache_size is not None and len(self._data) >= self.cache_size:
             self.record()
 
     def record(self) -> None:
@@ -83,20 +85,12 @@ def _record_to_xlsx(file_path: str,
     :param after: 数据后面的列
     :return: None
     """
-    try:
-        import openpyxl
-
-    except ModuleNotFoundError:
-        import os
-        os.system('pip install -i https://pypi.tuna.tsinghua.edu.cn/simple openpyxl')
-        import openpyxl
-
     if Path(file_path).exists():
-        wb = openpyxl.load_workbook(file_path)
+        wb = load_workbook(file_path)
         ws = wb.active
 
     else:
-        wb = openpyxl.Workbook(write_only=True)
+        wb = Workbook(write_only=True)
         ws = wb.create_sheet()
 
         title = _get_title(data[0], before, after)
@@ -190,18 +184,7 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
     :param head: 表头列表或元组
     :return: None
     """
-    try:
-        import openpyxl
-    except ModuleNotFoundError:
-        import os
-        os.system('pip install -i https://pypi.tuna.tsinghua.edu.cn/simple openpyxl')
-        import openpyxl
-
-    if Path(file_path).exists():
-        wb = openpyxl.load_workbook(file_path)
-    else:
-        wb = openpyxl.Workbook()
-
+    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
     ws = wb.active
 
     for key, i in enumerate(head, 1):
