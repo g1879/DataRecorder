@@ -20,6 +20,13 @@ class BaseRecorder(object):
         self.cache_size = cache_size
         self.encoding: str = 'utf-8'
 
+    def __del__(self) -> None:
+        """对象关闭时把剩下的数据写入文件"""
+        if self._type == 'xlsx' and self._data:
+            print(f'以下数据未保存：\n{self._data}')
+        else:
+            self.record()
+
     @property
     def cache_size(self) -> int:
         """返回缓存大小"""

@@ -21,13 +21,8 @@ class Recorder(BaseRecorder):
         """
         super().__init__(path, cache_size)
 
-    def __del__(self) -> None:
-        """对象关闭时把剩下的数据写入文件"""
-        if not self.path.endswith('.xlsx'):
-            self.record()
-
     def add_data(self, data: Union[list, tuple, dict, int, float, str]) -> None:
-        """添加数据，可一次添加多条数据                            \n
+        """添加数据，可一次添加多条数据                  \n
         :param data: 插入的数据，元组或列表
         :return: None
         """
