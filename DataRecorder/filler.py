@@ -111,7 +111,7 @@ class Filler(BaseRecorder):
         eg.[3, '名称', 'id']
         """
         if self.type in ('xlsx', 'csv'):
-            return _get_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
+            return _get_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding)
 
     def add_data(self, data: Union[list, tuple, dict]) -> None:
         """添加数据                                                                   \n
@@ -121,7 +121,7 @@ class Filler(BaseRecorder):
         """
         if not data:
             return
-        if isinstance(data, dict) or isinstance(data[0], int):  # 只有一个数据的情况
+        if isinstance(data, dict) or isinstance(data[0], (int, str)):  # 只有一个数据的情况
             data = (data,)
 
         new_data = []
@@ -130,8 +130,8 @@ class Filler(BaseRecorder):
                 item = list(item.values())
 
             length = len(item)
-            if not isinstance(item, (list, tuple, dict)) or length < 2 or not isinstance(item[0], (int, tuple, str)):
-                raise ValueError('数据项必须为长度大于2的list、tuple或dict，且第一位为int（行号）、str（坐标）或tuple（行列）。')
+            if not ((isinstance(item, (list, tuple, dict)) and length >= 2) or not isinstance(item[0], (int, str))):
+                raise ValueError('数据项必须为长度不少于2的list、tuple或dict，且第一位为int(行号)、str(eg."B3"或"3,2")。')
 
             if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 if isinstance(item[1], dict):
@@ -159,7 +159,7 @@ class Filler(BaseRecorder):
         if self.type == 'xlsx':
             _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
         elif self.type == 'csv':
-            _fill_to_csv(self.path, self._data, self._before, self._after, col)
+            _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
 
         self._data = []
 
@@ -181,7 +181,8 @@ def _get_keys(path: str,
               begin_row: int,
               sign_col: Union[int, str],
               sign: str,
-              key_cols: Union[list, tuple]) -> List[list]:
+              key_cols: Union[list, tuple],
+              encoding: str) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
@@ -189,6 +190,7 @@ def _get_keys(path: str,
     :param sign_col: 用于判断是否已填数据的列，从1开始
     :param sign: 按这个值判断是否已填数据
     :param key_cols: 关键字所在列，可以是多列
+    :param encoding: 字符编码，用于csv
     :return: 关键字组成的列表
     """
     key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
@@ -201,7 +203,7 @@ def _get_keys(path: str,
     if path.endswith('xlsx'):
         df = read_excel(path, header=None, skiprows=begin_row - 1)
     elif path.endswith('csv'):
-        df = read_csv(path, header=None, skiprows=begin_row - 1)
+        df = read_csv(path, header=None, skiprows=begin_row - 1, encoding=encoding)
     else:
         raise TypeError('只支持xlsx和csv格式。')
 
@@ -234,12 +236,14 @@ def _fill_to_xlsx(file_path: str,
         for key, j in enumerate(_data_to_list(i[1:], before, after)):
             if isinstance(i[0], int):  # 行号
                 ws.cell(i[0], col + key).value = j
-            elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
-                ws.cell(i[0][0], i[0][1]).value = j
-            elif isinstance(i[0], str):  # 坐标 如'A8'
-                ws[i[0]].value = j
+            elif isinstance(i[0], str):
+                if ',' in i[0]:  # 坐标 如'3,2'
+                    row, col = i[0].split(',')
+                    ws.cell(int(row), int(col)).value = j
+                else:  # 坐标 如'A8'
+                    ws[i[0]].value = j
             else:
-                raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）。')
+                raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
 
     wb.save(file_path)
     wb.close()
@@ -249,30 +253,34 @@ def _fill_to_csv(file_path: str,
                  data: Union[list, tuple],
                  before: Union[list, dict] = None,
                  after: Union[list, dict] = None,
-                 col: int = None) -> None:
+                 col: int = None,
+                 encoding: str = 'utf-8') -> None:
     """填写数据到xlsx文件            \n
     :param file_path: 文件路径
     :param data: 要记录的数据
     :param before: 数据前面的列
     :param after: 数据后面的列
     :param col: 开始记录的列号
+    :param encoding: 字符编码
     :return: None
     """
-    df = read_csv(file_path, header=None)
+    df = read_csv(file_path, header=None, encoding=encoding)
     df = df.where(df.notnull(), None)
 
     for i in data:
         if isinstance(i[0], int):  # 行号
             row = i[0]
-        elif isinstance(i[0], (tuple, list)) and len(i[0]) == 2:  # 行列数组
-            row = i[0][0]
-            col = i[0][1]
         elif isinstance(i[0], str):  # 坐标 如'A8'
-            xy = coordinate_from_string(i[0])
-            col = column_index_from_string(xy[0])
-            row = xy[1]
+            if ',' in i[0]:  # 坐标 如'3,2'
+                xy = i[0].split(',')
+                row = int(xy[0])
+                col = int(xy[1])
+            else:  # 坐标 如'A8'
+                xy = coordinate_from_string(i[0])
+                row = xy[1]
+                col = column_index_from_string(xy[0])
         else:
-            raise TypeError('数据第一位必须是int（行号）、str（坐标）或tuple（行列）。')
+            raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
 
         df_width = df.shape[1]
         full_width = col + len(i) - 1
@@ -285,7 +293,8 @@ def _fill_to_csv(file_path: str,
         for _ in range(row - df.shape[0]):
             df.loc[df.shape[0], :] = None
 
+        # 填充数据
         for k, j in enumerate(_data_to_list(i[1:], before, after)):
             df.loc[row - 1, col + k - 1] = j
 
-    df.to_csv(file_path, header=False, index=False)
+    df.to_csv(file_path, header=False, index=False, encoding=encoding)
