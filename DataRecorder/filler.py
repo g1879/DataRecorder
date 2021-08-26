@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+import csv
 from pathlib import Path
 from typing import Union, List
 
@@ -264,37 +265,35 @@ def _fill_to_csv(file_path: str,
     :param encoding: 字符编码
     :return: None
     """
-    df = read_csv(file_path, header=None, encoding=encoding)
-    df = df.where(df.notnull(), None)
+    with open(file_path, 'r', encoding=encoding) as f:
+        reader = csv.reader(f)
+        lines = list(reader)
+        行数 = len(lines)
 
-    for i in data:
-        if isinstance(i[0], int):  # 行号
-            row = i[0]
-        elif isinstance(i[0], str):  # 坐标 如'A8'
-            if ',' in i[0]:  # 坐标 如'3,2'
-                xy = i[0].split(',')
-                row = int(xy[0])
-                col = int(xy[1])
-            else:  # 坐标 如'A8'
-                xy = coordinate_from_string(i[0])
-                row = xy[1]
-                col = column_index_from_string(xy[0])
-        else:
-            raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
+        for i in data:
+            if isinstance(i[0], int):  # 行号
+                row = i[0]
+            elif isinstance(i[0], str):  # 坐标 如'A8'
+                if ',' in i[0]:  # 坐标 如'3,2'
+                    xy = i[0].split(',')
+                    row = int(xy[0])
+                    col = int(xy[1])
+                else:  # 坐标 如'A8'
+                    xy = coordinate_from_string(i[0])
+                    row = xy[1]
+                    col = column_index_from_string(xy[0])
+            else:
+                raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
 
-        df_width = df.shape[1]
-        full_width = col + len(i) - 1
+            for _ in range(row - 行数 + 1):
+                lines.append([])
 
-        # 若要填充的列号大于表格宽度，先填充无数据列
-        for j in range(full_width - df_width - 2):
-            df[df_width + j] = None
+            for _ in range(col - len(lines[row - 1]) + 1):
+                lines[row - 1].append('')
 
-        # 若要填充的行大于表格高度，先填充无数据行
-        for _ in range(row - df.shape[0]):
-            df.loc[df.shape[0], :] = None
+            # 填充数据
+            for k, j in enumerate(_data_to_list(i[1:], before, after)):
+                lines[row - 1][col + k - 1] = j
 
-        # 填充数据
-        for k, j in enumerate(_data_to_list(i[1:], before, after)):
-            df.loc[row - 1, col + k - 1] = j
-
-    df.to_csv(file_path, header=False, index=False, encoding=encoding)
+        writer = csv.writer(open(file_path, 'w', encoding=encoding, newline=''))
+        writer.writerows(lines)
