@@ -1,12 +1,11 @@
 # -*- coding:utf-8 -*-
-import csv
+from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from typing import Union, List
 
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string
-from pandas import read_excel, read_csv
 
 from .base import BaseRecorder
 from .functions import _data_to_list
@@ -111,8 +110,10 @@ class Filler(BaseRecorder):
         """返回key列内容，第一位为行号，其余为key列的值  \n
         eg.[3, '名称', 'id']
         """
-        if self.type in ('xlsx', 'csv'):
-            return _get_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding)
+        if self.type == 'csv':
+            return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding)
+        elif self.type == 'xlsx':
+            return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
 
     def add_data(self, data: Union[list, tuple, dict]) -> None:
         """添加数据                                                                   \n
@@ -178,12 +179,42 @@ class Filler(BaseRecorder):
         self.record()
 
 
-def _get_keys(path: str,
-              begin_row: int,
-              sign_col: Union[int, str],
-              sign: str,
-              key_cols: Union[list, tuple],
-              encoding: str) -> List[list]:
+def _get_xlsx_keys(path: str,
+                   begin_row: int,
+                   sign_col: Union[int, str],
+                   sign: str,
+                   key_cols: Union[list, tuple]) -> List[list]:
+    """返回key列内容，第一位为行号，其余为key列的值       \n
+    eg.[3, '名称', 'id']
+    :param path: 文件路径
+    :param begin_row: 数据起始行
+    :param sign_col: 用于判断是否已填数据的列，从1开始
+    :param sign: 按这个值判断是否已填数据
+    :param key_cols: 关键字所在列，可以是多列
+    :return: 关键字组成的列表
+    """
+    key_cols = [i if isinstance(i, int) else column_index_from_string(i) for i in key_cols]
+    sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
+
+    wb = load_workbook(path, read_only=True)
+    ws = wb.active
+
+    res_keys = []
+    for row in range(begin_row, ws.max_row + 1):
+        if ws.cell(row, sign_col).value == sign:
+            key = [row]
+            res_keys.append(key + [ws.cell(row, i).value for i in key_cols])
+
+    wb.close()
+    return res_keys
+
+
+def _get_csv_keys(path: str,
+                  begin_row: int,
+                  sign_col: Union[int, str],
+                  sign: str,
+                  key_cols: Union[list, tuple],
+                  encoding: str) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
@@ -194,27 +225,24 @@ def _get_keys(path: str,
     :param encoding: 字符编码，用于csv
     :return: 关键字组成的列表
     """
-    key_cols = list(map(lambda x: x - 1 if isinstance(x, int) else column_index_from_string(x) - 1, key_cols))
-    if isinstance(sign_col, str):
-        sign_col = column_index_from_string(sign_col)
-
+    key_cols = [i - 1 if isinstance(i, int) else column_index_from_string(i) - 1 for i in key_cols]
+    sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
+    sign = '' if sign is None else sign
     sign_col -= 1
-    begin_row = begin_row or 1
+    begin_row -= 1
+    res_keys = []
 
-    if path.endswith('xlsx'):
-        df = read_excel(path, header=None, skiprows=begin_row - 1)
-    elif path.endswith('csv'):
-        df = read_csv(path, header=None, skiprows=begin_row - 1, encoding=encoding)
-    else:
-        raise TypeError('只支持xlsx和csv格式。')
+    with open(path, 'r', encoding=encoding) as f:
+        reader = csv_reader(f)
+        lines = list(reader)[begin_row:]
 
-    if sign_col <= df.shape[1]:
-        df = df[df[sign_col].isna()] if sign is None else df[df[sign_col] == sign]
-    df = df[key_cols]
-    df.index += begin_row
-    df = df.where(df.notnull(), None)
+        for k, line in enumerate(lines):
+            row_sign = None if sign_col > len(line) - 1 else line[sign_col]
+            if row_sign == sign:
+                key = [k + 1]
+                res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
 
-    return [list(i) for i in df.itertuples()]
+    return res_keys
 
 
 def _fill_to_xlsx(file_path: str,
@@ -266,7 +294,7 @@ def _fill_to_csv(file_path: str,
     :return: None
     """
     with open(file_path, 'r', encoding=encoding) as f:
-        reader = csv.reader(f)
+        reader = csv_reader(f)
         lines = list(reader)
         lines_len = len(lines)
 
@@ -291,11 +319,11 @@ def _fill_to_csv(file_path: str,
                 lines_len += 1
 
             # 若列数不够，填充空列
-            lines[row - 1].extend([''] * (col - len(lines[row - 1]) + len(i) - 2))
+            lines[row - 1].extend([None] * (col - len(lines[row - 1]) + len(i) - 2))
 
             # 填充数据
             for k, j in enumerate(_data_to_list(i[1:], before, after)):
                 lines[row - 1][col + k - 1] = j
 
-        writer = csv.writer(open(file_path, 'w', encoding=encoding, newline=''))
+        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''))
         writer.writerows(lines)
