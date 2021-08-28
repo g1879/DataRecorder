@@ -268,7 +268,7 @@ def _fill_to_csv(file_path: str,
     with open(file_path, 'r', encoding=encoding) as f:
         reader = csv.reader(f)
         lines = list(reader)
-        行数 = len(lines)
+        lines_len = len(lines)
 
         for i in data:
             if isinstance(i[0], int):  # 行号
@@ -285,11 +285,13 @@ def _fill_to_csv(file_path: str,
             else:
                 raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
 
-            for _ in range(row - 行数 + 1):
+            # 若行数不够，填充行数
+            for _ in range(row - lines_len):
                 lines.append([])
+                lines_len += 1
 
-            for _ in range(col - len(lines[row - 1]) + 1):
-                lines[row - 1].append('')
+            # 若列数不够，填充空列
+            lines[row - 1].extend([''] * (col - len(lines[row - 1]) + len(i) - 2))
 
             # 填充数据
             for k, j in enumerate(_data_to_list(i[1:], before, after)):
