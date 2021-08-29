@@ -44,17 +44,20 @@ class Recorder(BaseRecorder):
         f = Path(self.path)
         f.parent.mkdir(parents=True, exist_ok=True)
 
-        if self.type == 'xlsx':
-            _record_to_xlsx(self.path, self._data, self._before, self._after)
+        while True:
+            try:
+                if self.type == 'xlsx':
+                    _record_to_xlsx(self.path, self._data, self._before, self._after)
+                elif self.type == 'csv':
+                    _record_to_csv(self.path, self._data, self._before, self._after, self.encoding)
+                elif self.type == 'txt':
+                    _record_to_txt(self.path, self._data, self._before, self._after, self.encoding)
+                elif self.type == 'json':
+                    _record_to_json(self.path, self._data, self._before, self._after, self.encoding)
+                break
 
-        elif self.type == 'csv':
-            _record_to_csv(self.path, self._data, self._before, self._after, self.encoding)
-
-        elif self.type == 'txt':
-            _record_to_txt(self.path, self._data, self._before, self._after, self.encoding)
-
-        elif self.type == 'json':
-            _record_to_json(self.path, self._data, self._before, self._after, self.encoding)
+            except PermissionError:
+                input('文件被打开，保存失败，请关闭后按回车重试。')
 
         self._data = []
 

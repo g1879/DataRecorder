@@ -23,10 +23,10 @@ class BaseRecorder(object):
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""
-        if self._type == 'xlsx' and self._data:
-            print(f'{self._data}\n\n以上数据未保存')
-        else:
+        if self._type != 'xlsx':
             self.record()
+        if self._data:
+            print(f'{self._data}\n\n以上数据未保存')
 
     @property
     def cache_size(self) -> int:

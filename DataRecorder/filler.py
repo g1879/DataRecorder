@@ -157,10 +157,17 @@ class Filler(BaseRecorder):
             return
 
         col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
-        if self.type == 'xlsx':
-            _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
-        elif self.type == 'csv':
-            _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
+
+        while True:
+            try:
+                if self.type == 'xlsx':
+                    _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
+                elif self.type == 'csv':
+                    _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
+                break
+
+            except PermissionError:
+                input('文件被打开，保存失败，请关闭后按回车重试。')
 
         self._data = []
 
