@@ -1,14 +1,13 @@
 # -*- coding:utf-8 -*-
-from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from typing import Union, List
+from csv import reader as csv_reader, writer as csv_writer
 
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string
 
-from .base import BaseRecorder
-from .functions import _data_to_list
+from .base import BaseRecorder, _data_to_list
 
 
 class Filler(BaseRecorder):
@@ -38,29 +37,6 @@ class Filler(BaseRecorder):
         self.sign_col = sign_col
         self.sign = sign
         self.data_col = data_col or sign_col
-
-    def set_path(self,
-                 path: Union[str, Path],
-                 key_cols: Union[str, int, list, tuple] = 1,
-                 begin_row: int = None,
-                 sign_col: Union[str, int] = None,
-                 sign: str = None,
-                 data_col: int = None) -> None:
-        """设置文件路径                             \n
-        :param path: 保存的文件路径
-        :param key_cols: 作为关键字的列，可以是多列
-        :param begin_row: 数据开始的行，默认表头一行
-        :param sign_col: 用于判断是否已填数据的列
-        :param sign: 按这个值判断是否已填数据
-        :param data_col: 要填入数据的第一列
-        """
-        if not Path(path).exists():
-            raise FileNotFoundError('文件不存在')
-        self.begin_row = begin_row or self.begin_row
-        self.sign_col = sign_col or self.sign_col
-        self.sign = sign or self.sign
-        self.data_col = sign or self.data_col
-        self.__init__(path, self.cache_size, key_cols, begin_row, sign_col, sign, data_col)
 
     @property
     def key_cols(self) -> Union[list, tuple]:
@@ -115,9 +91,32 @@ class Filler(BaseRecorder):
         elif self.type == 'xlsx':
             return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
 
+    def set_path(self,
+                 path: Union[str, Path],
+                 key_cols: Union[str, int, list, tuple] = 1,
+                 begin_row: int = None,
+                 sign_col: Union[str, int] = None,
+                 sign: str = None,
+                 data_col: int = None) -> None:
+        """设置文件路径                             \n
+        :param path: 保存的文件路径
+        :param key_cols: 作为关键字的列，可以是多列
+        :param begin_row: 数据开始的行，默认表头一行
+        :param sign_col: 用于判断是否已填数据的列
+        :param sign: 按这个值判断是否已填数据
+        :param data_col: 要填入数据的第一列
+        """
+        if not Path(path).exists():
+            raise FileNotFoundError('文件不存在')
+        self.begin_row = begin_row or self.begin_row
+        self.sign_col = sign_col or self.sign_col
+        self.sign = sign or self.sign
+        self.data_col = sign or self.data_col
+        self.__init__(path, self.cache_size, key_cols, begin_row, sign_col, sign, data_col)
+
     def add_data(self, data: Union[list, tuple, dict]) -> None:
         """添加数据                                                                   \n
-        数据格式：两位的list或tuple，第一位为行号，第二位为数据，数据可以是list, tuple, dict
+        数据格式：第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
         :param data: 要添加的内容，第一位为行号，其余为要添加的内容
         :return: None
         """
@@ -167,7 +166,7 @@ class Filler(BaseRecorder):
 
     def fill(self, func, *args) -> None:
         """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充  \n
-        方法第一个参数必须是keys，用于接收关键字列                                            \n
+        方法第一个参数必须是keys，用于接收关键字列，返回的第一位必须是行号或坐标                 \n
         :param func: 用于获取数据的方法，返回要填充的数据
         :param args: 该方法的参数
         :return: None
@@ -227,7 +226,7 @@ def _get_csv_keys(path: str,
     """
     key_cols = [i - 1 if isinstance(i, int) else column_index_from_string(i) - 1 for i in key_cols]
     sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
-    sign = '' if sign is None else sign
+    sign = '' if sign is None else str(sign)
     sign_col -= 1
     begin_row -= 1
     res_keys = []

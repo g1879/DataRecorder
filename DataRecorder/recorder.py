@@ -4,8 +4,7 @@ from typing import Union
 
 from openpyxl import Workbook, load_workbook
 
-from .base import BaseRecorder
-from .functions import _data_to_list, _data_to_list_or_dict
+from .base import BaseRecorder, _data_to_list, _data_to_list_or_dict
 
 
 class Recorder(BaseRecorder):
@@ -60,7 +59,7 @@ class Recorder(BaseRecorder):
         self._data = []
 
     def set_head(self, head: Union[list, tuple]) -> None:
-        """设置表头。只有 csv 和 xlsx 格式支持设置表头                           \n
+        """设置表头。只有 csv 和 xlsx 格式支持设置表头       \n
         :param head: 表头，列表或元组
         :return: None
         """
@@ -179,7 +178,7 @@ def _record_to_json(file_path: str,
 
 
 def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
-    """设置xlsx文件的表头                       \n
+    """设置xlsx文件的表头            \n
     :param file_path: 文件路径
     :param head: 表头列表或元组
     :return: None
@@ -195,7 +194,7 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
 
 
 def _set_csv_head(file_path: str, head: Union[list, tuple], encoding: str = 'utf-8') -> None:
-    """设置csv文件的表头                       \n
+    """设置csv文件的表头              \n
     :param file_path: 文件路径
     :param head: 表头列表或元组
     :param encoding: 编码
@@ -218,7 +217,7 @@ def _set_csv_head(file_path: str, head: Union[list, tuple], encoding: str = 'utf
 def _get_title(data: Union[list, dict],
                before: Union[list, dict, None] = None,
                after: Union[list, dict, None] = None) -> Union[list, None]:
-    """获取表头列表                         \n
+    """获取表头列表                  \n
     :param data: 数据列表或字典
     :param before: 数据前的列
     :param after: 数据后的列
