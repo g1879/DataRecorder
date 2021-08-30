@@ -73,6 +73,8 @@ r = Recorder(path, cache_size)  # 传入文件路径，及缓存条数
 r.path  # 文件路径
 r.cache_size  # 缓存的数据条数
 r.type  # 文件类型
+r.delimiter  # csv文件分隔符
+r.quote_char  # csv文件引用符
 ```
 
 ### Recorder 类方法
@@ -129,6 +131,8 @@ f.begin_row  # 数据开始行，默认从第二行开始
 f.sign_col  # 用于判断是否已填数据的列，编号从1开始
 f.data_col  # 要填入数据的第一列，从1开始，不传入时和sign_col一致
 f.keys  # key列内容，第一位为行号，其余为key列的值，eg.[3, '名称', 'id']
+r.delimiter  # csv文件分隔符
+r.quote_char  # csv文件引用符
 ```
 
 ### Filler 类方法
@@ -156,6 +160,6 @@ f.fill(func, *args)  # 接收一个方法，根据keys自动填充数据。每�
 
 ```python
 from DataRecorder.tootls import align_csv
-align_csv(path, encoding)  # 传入要处理的文件路径及编码
+align_csv(path, encoding, delimiter, quotechar)  # 传入要处理的文件路径及编码，分隔符j
 ```
 
