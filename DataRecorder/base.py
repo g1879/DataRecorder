@@ -8,7 +8,7 @@ class BaseRecorder(object):
     """记录器的父类"""
     SUPPORTS = ()
 
-    def __init__(self, path: Union[str, Path], cache_size: int = 50):
+    def __init__(self, path: Union[str, Path], cache_size: int = 50) -> None:
         """初始化                                  \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
@@ -20,8 +20,8 @@ class BaseRecorder(object):
         self.path = path
         self.cache_size = cache_size
         self.encoding: str = 'utf-8'
-        self.delimiter = ','  # csv文件分隔符
-        self.quote_char = '"'  # csv文件引用符
+        self.delimiter: str = ','  # csv文件分隔符
+        self.quote_char: str = '"'  # csv文件引用符
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""

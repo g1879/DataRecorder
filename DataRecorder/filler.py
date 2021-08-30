@@ -21,7 +21,7 @@ class Filler(BaseRecorder):
                  begin_row: int = 2,
                  sign_col: Union[str, int] = 2,
                  sign: str = None,
-                 data_col: Union[int, str] = None):
+                 data_col: Union[int, str] = None) -> None:
         """初始化                                                    \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
