@@ -20,6 +20,8 @@ class BaseRecorder(object):
         self.path = path
         self.cache_size = cache_size
         self.encoding: str = 'utf-8'
+        self.delimiter = ','  # csv文件分隔符
+        self.quote_char = '"'  # csv文件引用符
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""
@@ -107,12 +109,28 @@ class BaseRecorder(object):
         """清空缓存中的数据"""
         self._data = []
 
-    @abstractmethod
-    def record(self):
-        pass
+    def record(self) -> None:
+        """记录数据"""
+        # 具体功能由_record()实现，本方法实现自动重试功能
+        if not self._data:
+            return
+
+        while True:
+            try:
+                self._record()
+                break
+
+            except PermissionError:
+                print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
+
+        self._data = []
 
     @abstractmethod
     def add_data(self, data):
+        pass
+
+    @abstractmethod
+    def _record(self):
         pass
 
 

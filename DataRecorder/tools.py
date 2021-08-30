@@ -5,14 +5,19 @@ from pathlib import Path
 from typing import Union
 
 
-def align_csv(path: Union[str, Path], encoding='utf-8') -> None:
+def align_csv(path: Union[str, Path],
+              encoding: str = 'utf-8',
+              delimiter: str = ',',
+              quotechar: str = '"') -> None:
     """补全csv文件，使其每行列数一样多，用于pandas读取时避免出错
     :param path: 要处理的文件路径
     :param encoding: 文件编码
+    :param delimiter: 分隔符
+    :param quotechar: 引用符
     :return: None
     """
     with open(path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f)
+        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)
         lines_data = {}
         max_len = 0
@@ -28,5 +33,5 @@ def align_csv(path: Union[str, Path], encoding='utf-8') -> None:
         for i in lines_data:
             lines[i].extend([None] * (max_len - lines_data[i]))
 
-        writer = csv_writer(open(path, 'w', encoding=encoding, newline=''))
+        writer = csv_writer(open(path, 'w', encoding=encoding, newline=''), delimiter=delimiter, quotechar=quotechar)
         writer.writerows(lines)

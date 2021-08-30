@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
+from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from typing import Union, List
-from csv import reader as csv_reader, writer as csv_writer
 
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
@@ -22,7 +22,7 @@ class Filler(BaseRecorder):
                  sign_col: Union[str, int] = 2,
                  sign: str = None,
                  data_col: Union[int, str] = None):
-        """初始化                                                  \n
+        """初始化                                                    \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始
@@ -87,7 +87,8 @@ class Filler(BaseRecorder):
         eg.[3, '名称', 'id']
         """
         if self.type == 'csv':
-            return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding)
+            return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
+                                 self.delimiter, self.quote_char)
         elif self.type == 'xlsx':
             return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
 
@@ -151,25 +152,14 @@ class Filler(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
-    def record(self) -> None:
+    def _record(self) -> None:
         """记录数据"""
-        if not self._data:
-            return
-
         col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
 
-        while True:
-            try:
-                if self.type == 'xlsx':
-                    _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
-                elif self.type == 'csv':
-                    _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
-                break
-
-            except PermissionError:
-                input('文件被打开，保存失败，请关闭后按回车重试。')
-
-        self._data = []
+        if self.type == 'xlsx':
+            _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
+        elif self.type == 'csv':
+            _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
 
     def fill(self, func, *args) -> None:
         """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充  \n
@@ -220,7 +210,9 @@ def _get_csv_keys(path: str,
                   sign_col: Union[int, str],
                   sign: str,
                   key_cols: Union[list, tuple],
-                  encoding: str) -> List[list]:
+                  encoding: str,
+                  delimiter: str,
+                  quotechar: str) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
@@ -228,7 +220,9 @@ def _get_csv_keys(path: str,
     :param sign_col: 用于判断是否已填数据的列，从1开始
     :param sign: 按这个值判断是否已填数据
     :param key_cols: 关键字所在列，可以是多列
-    :param encoding: 字符编码，用于csv
+    :param encoding: 字符编码
+    :param delimiter: 分隔符
+    :param quotechar: 引用符
     :return: 关键字组成的列表
     """
     key_cols = [i - 1 if isinstance(i, int) else column_index_from_string(i) - 1 for i in key_cols]
@@ -239,11 +233,11 @@ def _get_csv_keys(path: str,
     res_keys = []
 
     with open(path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f)
+        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)[begin_row:]
 
         for k, line in enumerate(lines):
-            row_sign = None if sign_col > len(line) - 1 else line[sign_col]
+            row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
             if row_sign == sign:
                 key = [k + 1]
                 res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
@@ -289,7 +283,9 @@ def _fill_to_csv(file_path: str,
                  before: Union[list, dict] = None,
                  after: Union[list, dict] = None,
                  col: int = None,
-                 encoding: str = 'utf-8') -> None:
+                 encoding: str = 'utf-8',
+                 delimiter: str = ',',
+                 quotechar: str = '"') -> None:
     """填写数据到xlsx文件            \n
     :param file_path: 文件路径
     :param data: 要记录的数据
@@ -297,10 +293,12 @@ def _fill_to_csv(file_path: str,
     :param after: 数据后面的列
     :param col: 开始记录的列号
     :param encoding: 字符编码
+    :param delimiter: 分隔符
+    :param quotechar: 引用符
     :return: None
     """
     with open(file_path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f)
+        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)
         lines_len = len(lines)
 
@@ -331,5 +329,6 @@ def _fill_to_csv(file_path: str,
             for k, j in enumerate(_data_to_list(i[1:], before, after)):
                 lines[row - 1][col + k - 1] = j
 
-        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''))
+        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,
+                            quotechar=quotechar)
         writer.writerows(lines)
