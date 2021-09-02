@@ -106,14 +106,12 @@ def _record_to_csv(file_path: str,
     :return: None
     """
     from csv import writer
+    title = _get_title(data[0], before, after) if not Path(file_path).exists() else None
+
     with open(file_path, 'a+', newline='', encoding=encoding) as f:
         csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
-
-        if not Path(file_path).exists():
-            title = _get_title(data[0], before, after)
-            if title:
-                csv_write.writerow(title)
-
+        if title:
+            csv_write.writerow(title)
         for i in data:
             csv_write.writerow(_data_to_list(i, before, after))
 

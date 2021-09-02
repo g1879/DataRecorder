@@ -25,10 +25,7 @@ class BaseRecorder(object):
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""
-        if self._type != 'xlsx':
-            self.record()
-        if self._data:
-            print(f'{self._data}\n\n以上数据未保存')
+        self.record()
 
     @property
     def cache_size(self) -> int:
@@ -71,7 +68,23 @@ class BaseRecorder(object):
 
     @property
     def type(self) -> str:
+        """返回文件类型"""
         return self._type
+
+    @property
+    def data(self) -> list:
+        """返回当前保存在缓存的数据"""
+        return self._data
+
+    @property
+    def before(self) -> Union[list, tuple, str, dict]:
+        """返回当前before内容"""
+        return self._before
+
+    @property
+    def after(self) -> Union[list, tuple, str, dict]:
+        """返回当前after内容"""
+        return self._after
 
     def set_before(self, before: Union[list, tuple, str, dict]) -> None:
         """设置在数据前面补充的列                              \n
@@ -121,7 +134,15 @@ class BaseRecorder(object):
                 break
 
             except PermissionError:
-                print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
+                print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+
+            except Exception as e:
+                if self._data:
+                    print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                    break
+
+                if 'Python is likely shutting down' not in str(e):
+                    raise
 
         self._data = []
 
