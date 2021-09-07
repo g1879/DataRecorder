@@ -192,14 +192,12 @@ def _get_xlsx_keys(path: str,
     key_cols = [i if isinstance(i, int) else column_index_from_string(i) for i in key_cols]
     sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
 
-    wb = load_workbook(path, read_only=True)
+    wb = load_workbook(path, data_only=True)
     ws = wb.active
 
-    res_keys = []
-    for row in range(begin_row, ws.max_row + 1):
-        if ws.cell(row, sign_col).value == sign:
-            key = [row]
-            res_keys.append(key + [ws.cell(row, i).value for i in key_cols])
+    res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
+                for ind, row in enumerate(ws.rows, 1)
+                if ind >= begin_row and row[sign_col - 1].value == sign]
 
     wb.close()
     return res_keys
