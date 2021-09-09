@@ -6,7 +6,7 @@ from typing import Union
 
 class BaseRecorder(object):
     """记录器的父类"""
-    SUPPORTS = ()
+    SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self, path: Union[str, Path], cache_size: int = 50) -> None:
         """初始化                                  \n

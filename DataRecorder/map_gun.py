@@ -7,7 +7,6 @@ from .base import BaseRecorder
 
 class MapGun(BaseRecorder):
     """把二维数据填充到以左上角坐标为起点的范围"""
-    SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self, path: Union[str, Path]):
         super().__init__(path)

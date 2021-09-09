@@ -12,7 +12,6 @@ from .base import BaseRecorder, _data_to_list
 
 class Filler(BaseRecorder):
     """Filler类用于根据现有文件中的关键字向文件填充数据"""
-    SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self,
                  path: Union[str, Path],
