@@ -300,6 +300,7 @@ def _fill_to_csv(file_path: str,
         lines_len = len(lines)
 
         for i in data:
+            now_data = _data_to_list(i[1:], before, after)
             if isinstance(i[0], int):  # 行号
                 row = i[0]
             elif isinstance(i[0], str):  # 坐标 如'A8'
@@ -320,10 +321,10 @@ def _fill_to_csv(file_path: str,
                 lines_len += 1
 
             # 若列数不够，填充空列
-            lines[row - 1].extend([None] * (col - len(lines[row - 1]) + len(i) - 2))
+            lines[row - 1].extend([None] * (col - len(lines[row - 1]) + len(now_data) - 1))
 
             # 填充数据
-            for k, j in enumerate(_data_to_list(i[1:], before, after)):
+            for k, j in enumerate(now_data):
                 lines[row - 1][col + k - 1] = j
 
         writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,

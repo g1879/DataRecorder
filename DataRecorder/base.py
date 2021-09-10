@@ -116,7 +116,7 @@ class BaseRecorder(object):
         elif isinstance(after, tuple):
             self._after = list(after)
         else:
-            self._before = [str(after)]
+            self._after = [str(after)]
 
     def clear(self) -> None:
         """清空缓存中的数据"""
@@ -139,10 +139,9 @@ class BaseRecorder(object):
             except Exception as e:
                 if self._data:
                     print(f'\n{self._data}\n\n注意！！以上数据未保存')
-                    break
-
                 if 'Python is likely shutting down' not in str(e):
                     raise
+                break
 
         self._data = []
 
