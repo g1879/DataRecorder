@@ -75,7 +75,6 @@ def _record_to_xlsx(file_path: str,
     if Path(file_path).exists():
         wb = load_workbook(file_path)
         ws = wb.active
-
     else:
         wb = Workbook()
         ws = wb.active
@@ -83,7 +82,7 @@ def _record_to_xlsx(file_path: str,
     row, col = coordinate
     for i in data:
         if not isinstance(i, (list, tuple)):
-            i = [i]
+            i = (i,)
         now_data = _data_to_list(i, before, after)
         for ind, item in enumerate(now_data):
             ws.cell(row, col + ind).value = item
