@@ -20,7 +20,8 @@ class MapGun(BaseRecorder):
         self.float_coordinate = float_coordinate
 
     @property
-    def coordinate(self):
+    def coordinate(self) -> list:
+        """起始坐标"""
         return self._loc
 
     @coordinate.setter
@@ -43,12 +44,13 @@ class MapGun(BaseRecorder):
         else:
             raise ValueError('传入为list或tuple时长度必须为2')
 
-    def add_data(self, data: Union[list, tuple]):
+    def add_data(self, data: Union[list, tuple]) -> None:
         """接收二维数据，若是一维的，每个元素作为一行看待"""
         self._data = data
         self.record()
 
-    def _record(self):
+    def _record(self) -> None:
+        """记录数据"""
         if self.type == 'xlsx':
             _record_to_xlsx(self.path, self._data, self.coordinate, self._before, self._after)
         elif self.type == 'csv':
@@ -72,12 +74,8 @@ def _record_to_xlsx(file_path: str,
     :param after: 数据后面的列
     :return: None
     """
-    if Path(file_path).exists():
-        wb = load_workbook(file_path)
-        ws = wb.active
-    else:
-        wb = Workbook()
-        ws = wb.active
+    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
+    ws = wb.active
 
     row, col = coordinate
     for i in data:
@@ -111,30 +109,35 @@ def _record_to_csv(file_path: str,
     :param quotechar: 引用符
     :return: None
     """
-    # TODO: 添加新建功能
+    if not Path(file_path).exists():
+        with open(file_path, 'w', encoding=encoding):
+            pass
+
     with open(file_path, 'r', encoding=encoding) as f:
         reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)
         lines_len = len(lines)
         row, col = coordinate
 
-        for _ in range(row + len(data) - lines_len):  # 若行数不够，填充行数
+        # 若行数不够，填充行数
+        for _ in range(row + len(data) - lines_len):
             lines.append([])
-            lines_len += 1
 
+        # 填入数据
         for ind, i in enumerate(data):
             if not isinstance(i, (list, tuple)):
-                i = [i]
+                i = (i,)
+
             now_data = _data_to_list(i, before, after)
+            row_num = row + ind - 1
 
             # 若列数不够，填充空列
-            lines[row - 1].extend([None] * (col - len(lines[row - 1]) + len(now_data) - 1))
+            lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
 
-            # 填充数据
+            # 填充一行数据
             for k, j in enumerate(now_data):
-                # FIXME: 列溢出问题
-                lines[row + ind - 1][col + k - 1] = j
+                lines[row_num][col + k - 1] = j
 
-        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,
-                            quotechar=quotechar)
+        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''),
+                            delimiter=delimiter, quotechar=quotechar)
         writer.writerows(lines)

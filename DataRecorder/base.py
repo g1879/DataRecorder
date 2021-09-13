@@ -3,6 +3,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Union
 
+from openpyxl.cell import Cell
+
 
 class BaseRecorder(object):
     """记录器的父类"""
@@ -100,7 +102,7 @@ class BaseRecorder(object):
         elif isinstance(before, tuple):
             self._before = list(before)
         else:
-            self._before = [str(before)]
+            self._before = [before]
 
     def set_after(self, after: Union[list, tuple, str, dict]) -> None:
         """设置在数据后面补充的列                                \n
@@ -116,7 +118,7 @@ class BaseRecorder(object):
         elif isinstance(after, tuple):
             self._after = list(after)
         else:
-            self._after = [str(after)]
+            self._after = [after]
 
     def clear(self) -> None:
         """清空缓存中的数据"""
@@ -183,6 +185,7 @@ def _data_to_list(data: Union[list, tuple, dict],
         else:
             return_list.extend([str(i)])
 
+    return_list = [i.value if isinstance(i, Cell) else i for i in return_list]
     return return_list
 
 

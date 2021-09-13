@@ -320,12 +320,13 @@ def _fill_to_csv(file_path: str,
                 lines.append([])
                 lines_len += 1
 
+            row_num = row - 1
             # 若列数不够，填充空列
-            lines[row - 1].extend([None] * (col - len(lines[row - 1]) + len(now_data) - 1))
+            lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
 
             # 填充数据
             for k, j in enumerate(now_data):
-                lines[row - 1][col + k - 1] = j
+                lines[row_num][col + k - 1] = j
 
         writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,
                             quotechar=quotechar)
