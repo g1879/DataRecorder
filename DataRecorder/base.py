@@ -3,6 +3,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Union
 
+from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell
 
 
@@ -147,6 +148,20 @@ class BaseRecorder(object):
 
         self._data = []
 
+    def set_head(self, head: Union[list, tuple]) -> None:
+        """设置表头。只有 csv 和 xlsx 格式支持设置表头       \n
+        :param head: 表头，列表或元组
+        :return: None
+        """
+        if self.type == 'xlsx':
+            _set_xlsx_head(self.path, head)
+
+        elif self.type == 'csv':
+            _set_csv_head(self.path, head, self.encoding, self.delimiter, self.quote_char)
+
+        else:
+            raise TypeError('只能对xlsx和csv文件设置表头。')
+
     @abstractmethod
     def add_data(self, data):
         pass
@@ -209,3 +224,50 @@ def _data_to_list_or_dict(data: Union[list, tuple, dict],
             data = {**data, **after}
 
         return data
+
+
+def _set_csv_head(file_path: str,
+                  head: Union[list, tuple],
+                  encoding: str = 'utf-8',
+                  delimiter: str = ',',
+                  quotechar: str = '"') -> None:
+    """设置csv文件的表头              \n
+    :param file_path: 文件路径
+    :param head: 表头列表或元组
+    :param encoding: 编码
+    :param delimiter: 分隔符
+    :param quotechar: 引用符
+    :return: None
+    """
+    from csv import writer
+    if Path(file_path).exists():
+        with open(file_path, 'r', newline='', encoding=encoding) as f:
+            content = "".join(f.readlines()[1:])
+
+        with open(file_path, 'w', newline='', encoding=encoding) as f:
+            csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
+            csv_write.writerow(head)
+
+        with open(file_path, 'a+', newline='', encoding=encoding) as f:
+            f.write(f'{content}')
+
+    else:
+        with open(file_path, 'w', newline='', encoding=encoding) as f:
+            csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
+            csv_write.writerow(head)
+
+
+def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
+    """设置xlsx文件的表头            \n
+    :param file_path: 文件路径
+    :param head: 表头列表或元组
+    :return: None
+    """
+    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
+    ws = wb.active
+
+    for key, i in enumerate(head, 1):
+        ws.cell(1, key).value = i
+
+    wb.save(file_path)
+    wb.close()

@@ -15,6 +15,11 @@ class MapGun(BaseRecorder):
     def __init__(self, path: Union[str, Path],
                  coordinate: Union[str, tuple, list] = None,
                  float_coordinate: bool = True):
+        """初始化                                              \n
+        :param path: 保存的文件路径
+        :param coordinate: 目标左上角坐标
+        :param float_coordinate: 保存数据后坐标是否移动到底部
+        """
         super().__init__(path, 1)
         self.coordinate = coordinate or [1, 1]
         self.float_coordinate = float_coordinate
@@ -26,17 +31,17 @@ class MapGun(BaseRecorder):
 
     @coordinate.setter
     def coordinate(self, loc: Union[str, tuple, list]) -> None:
-        """设置填写坐标
+        """设置填写坐标                                                             \n
         :param loc: 接受几种形式：'A3', '3,1', (3, 1), [3, 1]，除第一种外都是行在前
         :return: None
         """
         if isinstance(loc, str):
-            if ',' not in loc:
+            if ',' not in loc:  # 'A3'形式
                 xy = coordinate_from_string(loc)
                 self._loc = [xy[1], column_index_from_string(xy[0])]
                 return
-            else:
-                loc = loc.split(',')
+            else:  # '3,1'形式
+                loc = loc.replace(' ', '').split(',')
 
         if isinstance(loc, (tuple, list)) and len(loc) == 2:
             self._loc = [int(loc[0]), int(loc[1])]
@@ -44,8 +49,27 @@ class MapGun(BaseRecorder):
         else:
             raise ValueError('传入为list或tuple时长度必须为2')
 
-    def add_data(self, data: Union[list, tuple]) -> None:
-        """接收二维数据，若是一维的，每个元素作为一行看待"""
+    @property
+    def cache_size(self) -> int:
+        """返回缓存大小"""
+        return self._cache
+
+    @cache_size.setter
+    def cache_size(self, cache_size: int) -> None:
+        """固定缓存大小                   \n
+        :param cache_size: 缓存大小
+        :return: None
+        """
+        print('MapGun的cache_size属性固定为1不能修改。')
+
+    def add_data(self, data: Union[list, tuple], coordinate: Union[str, tuple, list] = None) -> None:
+        """接收二维数据，若是一维的，每个元素作为一行看待    \n
+        :param data: 二维数据
+        :param coordinate: 左上角坐标
+        :return: None
+        """
+        if coordinate is not None:
+            self.coordinate = coordinate
         self._data = data
         self.record()
 
@@ -83,7 +107,7 @@ def _record_to_xlsx(file_path: str,
             i = (i,)
         now_data = _data_to_list(i, before, after)
         for ind, item in enumerate(now_data):
-            ws.cell(row, col + ind).value = item
+            ws[row][col + ind - 1].value = item
         row += 1
 
     wb.save(file_path)
