@@ -45,7 +45,6 @@ class MapGun(BaseRecorder):
 
         if isinstance(loc, (tuple, list)) and len(loc) == 2:
             self._loc = [int(loc[0]), int(loc[1])]
-
         else:
             raise ValueError('传入为list或tuple时长度必须为2')
 

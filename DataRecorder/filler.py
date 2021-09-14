@@ -264,7 +264,7 @@ def _fill_to_xlsx(file_path: str,
                 ws.cell(i[0], col + key).value = j
             elif isinstance(i[0], str):
                 if ',' in i[0]:  # 坐标 如'3,2'
-                    row, col = i[0].split(',')
+                    row, col = i[0].replace(' ', '').split(',')
                     ws.cell(int(row), int(col)).value = j
                 else:  # 坐标 如'A8'
                     ws[i[0]].value = j
@@ -305,7 +305,7 @@ def _fill_to_csv(file_path: str,
                 row = i[0]
             elif isinstance(i[0], str):  # 坐标 如'A8'
                 if ',' in i[0]:  # 坐标 如'3,2'
-                    xy = i[0].split(',')
+                    xy = i[0].replace(' ', '').split(',')
                     row = int(xy[0])
                     col = int(xy[1])
                 else:  # 坐标 如'A8'
