@@ -1,11 +1,10 @@
 # -*- coding:utf-8 -*-
 from csv import reader as csv_reader, writer as csv_writer
-from pathlib import Path
-from typing import Union, List
-
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string
+from pathlib import Path
+from typing import Union, List
 
 from .base import BaseRecorder, _data_to_list
 
@@ -259,17 +258,22 @@ def _fill_to_xlsx(file_path: str,
     ws = wb.active
 
     for i in data:
+        if isinstance(i[0], int):  # 行号
+            row = i[0]
+        elif isinstance(i[0], str):
+            if ',' in i[0]:  # 坐标 如'3,2'
+                xy = i[0].split(',')
+                row = int(xy[0])
+                col = int(xy[1])
+            else:  # 坐标 如'A8'
+                xy = coordinate_from_string(i[0])
+                row = xy[1]
+                col = column_index_from_string(xy[0])
+        else:
+            raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
+
         for key, j in enumerate(_data_to_list(i[1:], before, after)):
-            if isinstance(i[0], int):  # 行号
-                ws.cell(i[0], col + key).value = j
-            elif isinstance(i[0], str):
-                if ',' in i[0]:  # 坐标 如'3,2'
-                    row, col = i[0].replace(' ', '').split(',')
-                    ws.cell(int(row), int(col)).value = j
-                else:  # 坐标 如'A8'
-                    ws[i[0]].value = j
-            else:
-                raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
+            ws.cell(row, col + key).value = j
 
     wb.save(file_path)
     wb.close()
