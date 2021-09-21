@@ -2,11 +2,10 @@
 from csv import reader as csv_reader, writer as csv_writer
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
-from openpyxl.utils.cell import coordinate_from_string
 from pathlib import Path
 from typing import Union, List
 
-from .base import BaseRecorder, _data_to_list
+from .base import BaseRecorder, _data_to_list, _parse_coordinate
 
 
 class Filler(BaseRecorder):
@@ -150,6 +149,21 @@ class Filler(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
+    def set_link(self,
+                 coordinate: Union[int, str, tuple, list],
+                 link: str,
+                 content: Union[int, str, float] = None) -> None:
+        """为单元格设置超链接                          \n
+        :param coordinate: 单元格坐标
+        :param link: 超链接
+        :param content: 单元格内容
+        :return: None
+        """
+        if self.type != 'xlsx':
+            raise TypeError('set_link()只支持xlsx格式。')
+
+        self.add_data(('set_link', coordinate, link, content))
+
     def _record(self) -> None:
         """记录数据"""
         col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
@@ -258,22 +272,16 @@ def _fill_to_xlsx(file_path: str,
     ws = wb.active
 
     for i in data:
-        if isinstance(i[0], int):  # 行号
-            row = i[0]
-        elif isinstance(i[0], str):
-            if ',' in i[0]:  # 坐标 如'3,2'
-                xy = i[0].split(',')
-                row = int(xy[0])
-                col = int(xy[1])
-            else:  # 坐标 如'A8'
-                xy = coordinate_from_string(i[0])
-                row = xy[1]
-                col = column_index_from_string(xy[0])
+        if i[0] == 'set_link':
+            row, col = _parse_coordinate(i[1], col)
+            cell = ws.cell(row, col)
+            cell.hyperlink = i[2]
+            if i[3] is not None:
+                cell.value = i[3]
         else:
-            raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
-
-        for key, j in enumerate(_data_to_list(i[1:], before, after)):
-            ws.cell(row, col + key).value = j
+            row, col = _parse_coordinate(i[0], col, (list, tuple))
+            for key, j in enumerate(_data_to_list(i[1:], before, after)):
+                ws.cell(row, col + key).value = j
 
     wb.save(file_path)
     wb.close()
@@ -305,19 +313,7 @@ def _fill_to_csv(file_path: str,
 
         for i in data:
             now_data = _data_to_list(i[1:], before, after)
-            if isinstance(i[0], int):  # 行号
-                row = i[0]
-            elif isinstance(i[0], str):  # 坐标 如'A8'
-                if ',' in i[0]:  # 坐标 如'3,2'
-                    xy = i[0].replace(' ', '').split(',')
-                    row = int(xy[0])
-                    col = int(xy[1])
-                else:  # 坐标 如'A8'
-                    xy = coordinate_from_string(i[0])
-                    row = xy[1]
-                    col = column_index_from_string(xy[0])
-            else:
-                raise TypeError(f'数据第一位必须是int（行号）、str（eg."B3"或"3,2"）。现在是：{i[0]}')
+            row, col = _parse_coordinate(i[0], col, (list, tuple))
 
             # 若行数不够，填充行数
             for _ in range(row - lines_len):

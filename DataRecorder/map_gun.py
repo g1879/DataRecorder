@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Union
 
 from openpyxl import load_workbook, Workbook
-from openpyxl.utils.cell import coordinate_from_string, column_index_from_string
 
-from .base import BaseRecorder, _data_to_list
+from .base import BaseRecorder, _data_to_list, _parse_coordinate
 
 
 class MapGun(BaseRecorder):
@@ -30,23 +29,12 @@ class MapGun(BaseRecorder):
         return self._loc
 
     @coordinate.setter
-    def coordinate(self, loc: Union[str, tuple, list]) -> None:
-        """设置填写坐标                                                             \n
-        :param loc: 接受几种形式：'A3', '3,1', (3, 1), [3, 1]，除第一种外都是行在前
+    def coordinate(self, coordinate: Union[str, tuple, list]) -> None:
+        """设置填写坐标                                                               \n
+        :param coordinate: 接受几种形式：'A3', '3,1', (3, 1), [3, 1]，除第一种外都是行在前
         :return: None
         """
-        if isinstance(loc, str):
-            if ',' not in loc:  # 'A3'形式
-                xy = coordinate_from_string(loc)
-                self._loc = [xy[1], column_index_from_string(xy[0])]
-                return
-            else:  # '3,1'形式
-                loc = loc.replace(' ', '').split(',')
-
-        if isinstance(loc, (tuple, list)) and len(loc) == 2:
-            self._loc = [int(loc[0]), int(loc[1])]
-        else:
-            raise ValueError('传入为list或tuple时长度必须为2')
+        self._loc = list(_parse_coordinate(coordinate, None, int))
 
     @property
     def cache_size(self) -> int:
@@ -59,7 +47,7 @@ class MapGun(BaseRecorder):
         :param cache_size: 缓存大小
         :return: None
         """
-        print('MapGun的cache_size属性固定为1不能修改。')
+        pass
 
     def add_data(self, data: Union[list, tuple], coordinate: Union[str, tuple, list] = None) -> None:
         """接收二维数据，若是一维的，每个元素作为一行看待    \n

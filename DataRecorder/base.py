@@ -1,10 +1,12 @@
 # -*- coding:utf-8 -*-
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell
+from openpyxl.utils import column_index_from_string
+from openpyxl.utils.cell import coordinate_from_string
 
 
 class BaseRecorder(object):
@@ -271,3 +273,34 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
 
     wb.save(file_path)
     wb.close()
+
+
+def _parse_coordinate(coordinate: Union[int, str, list, tuple],
+                      col: int = None,
+                      disable_type: Union[type, list, tuple] = None) -> Tuple[int, int]:
+    """解析坐标，返回坐标tuple                                              \n
+    :param coordinate: 坐标
+    :param col: 列号，用于只传入行号的情况
+    :param disable_type: 禁用的格式，可以传入单个格式或格式组成的list或tuple
+    :return: 坐标tuple（行, 列）
+    """
+    if disable_type and isinstance(coordinate, disable_type):
+        raise TypeError(f'当前坐标类型不允许为{disable_type}')
+
+    if isinstance(coordinate, (int, float)):
+        if col:
+            return int(coordinate), col
+        else:
+            raise ValueError('只输入行号时必须同时输入列号')
+
+    if isinstance(coordinate, str):
+        if ',' in coordinate:  # 'A3'形式
+            coordinate = coordinate.replace(' ', '').split(',')
+        else:  # '3,1'形式
+            xy = coordinate_from_string(coordinate)
+            return xy[1], column_index_from_string(xy[0])
+
+    if isinstance(coordinate, (tuple, list)) and len(coordinate) == 2:
+        return int(coordinate[0]), int(coordinate[1])
+    else:
+        raise ValueError('list或tuple时长度必须为2')
