@@ -159,10 +159,10 @@ f.begin_row  # 数据开始行，默认从第二行开始
 f.sign_col  # 用于判断是否已填数据的列，编号从1开始
 f.data_col  # 要填入数据的第一列，从1开始，不传入时和sign_col一致
 f.keys  # key列内容，第一位为行号，其余为key列的值，eg.[3, '名称', 'id']
-r.delimiter  # csv文件分隔符
-r.quote_char  # csv文件引用符
-r.before  #  补充在前面的列数据
-r.after  #  补充在后面的列数据
+f.delimiter  # csv文件分隔符
+f.quote_char  # csv文件引用符
+f.before  #  补充在前面的列数据
+f.after  #  补充在后面的列数据
 ```
 
 ### Filler 类方法
@@ -172,7 +172,8 @@ f.set_path()  # 更改文件路径，参数和__init__()一致
 f.add_data()  # 插入一条或多条数据，数据第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
 f.record()  # 主动保存数据
 f.fill(func, *args)  # 接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充。方法第一个参数必须是keys，用于接收关键字列
-r.set_head(head)  # 设置表头
+f.set_head(head)  # 设置表头
+f.set_link(coordinate, link, content)  # 为单元格设置超链接
 ```
 
 ### Tips
@@ -212,10 +213,10 @@ m.after  #  补充在后面的列数据
 ### MapGun 类方法
 
 ```python
-f.add_data(data, coordinate)  # 插入二维数据，可同时指定左上角坐标
-r.set_before(before)  # 设置在数据前面补充的列
-r.set_after(after)  # 设置在数据后面补充的列
-r.set_head(head)  # 设置表头
+m.add_data(data, coordinate)  # 插入二维数据，可同时指定左上角坐标
+m.set_before(before)  # 设置在数据前面补充的列
+m.set_after(after)  # 设置在数据后面补充的列
+m.set_head(head)  # 设置表头
 ```
 
 ### Tips

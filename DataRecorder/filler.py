@@ -1,9 +1,10 @@
 # -*- coding:utf-8 -*-
 from csv import reader as csv_reader, writer as csv_writer
-from openpyxl import load_workbook
-from openpyxl.utils import column_index_from_string
 from pathlib import Path
 from typing import Union, List
+
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import column_index_from_string
 
 from .base import BaseRecorder, _data_to_list, _parse_coordinate
 
@@ -268,7 +269,7 @@ def _fill_to_xlsx(file_path: str,
     :param col: 开始记录的列号
     :return: None
     """
-    wb = load_workbook(file_path)
+    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
     ws = wb.active
 
     for i in data:
@@ -306,6 +307,10 @@ def _fill_to_csv(file_path: str,
     :param quotechar: 引用符
     :return: None
     """
+    if not Path(file_path).exists():
+        with open(file_path, 'w', encoding=encoding):
+            pass
+
     with open(file_path, 'r', encoding=encoding) as f:
         reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)
