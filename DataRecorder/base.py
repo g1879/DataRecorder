@@ -13,7 +13,7 @@ class BaseRecorder(object):
     """记录器的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
-    def __init__(self, path: Union[str, Path], cache_size: int = 50) -> None:
+    def __init__(self, path: Union[str, Path], cache_size: int = None) -> None:
         """初始化                                  \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件
@@ -23,7 +23,7 @@ class BaseRecorder(object):
         self._after = []
         self._type = None
         self.path = path
-        self.cache_size = cache_size
+        self.cache_size = cache_size if cache_size is not None else 1000
         self.encoding: str = 'utf-8'
         self.delimiter: str = ','  # csv文件分隔符
         self.quote_char: str = '"'  # csv文件引用符
@@ -275,32 +275,32 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
     wb.close()
 
 
-def _parse_coordinate(coordinate: Union[int, str, list, tuple],
-                      col: int = None,
-                      disable_type: Union[type, list, tuple] = None) -> Tuple[int, int]:
+def _parse_coord(coord: Union[int, str, list, tuple],
+                 col: int = None,
+                 disable_type: Union[type, list, tuple] = None) -> Tuple[int, int]:
     """解析坐标，返回坐标tuple                                              \n
-    :param coordinate: 坐标
+    :param coord: 坐标
     :param col: 列号，用于只传入行号的情况
     :param disable_type: 禁用的格式，可以传入单个格式或格式组成的list或tuple
     :return: 坐标tuple（行, 列）
     """
-    if disable_type and isinstance(coordinate, disable_type):
+    if disable_type and isinstance(coord, disable_type):
         raise TypeError(f'当前坐标类型不允许为{disable_type}')
 
-    if isinstance(coordinate, (int, float)):
+    if isinstance(coord, (int, float)):
         if col:
-            return int(coordinate), col
+            return int(coord), col
         else:
             raise ValueError('只输入行号时必须同时输入列号')
 
-    if isinstance(coordinate, str):
-        if ',' in coordinate:  # 'A3'形式
-            coordinate = coordinate.replace(' ', '').split(',')
+    if isinstance(coord, str):
+        if ',' in coord:  # 'A3'形式
+            coord = coord.replace(' ', '').split(',')
         else:  # '3,1'形式
-            xy = coordinate_from_string(coordinate)
+            xy = coordinate_from_string(coord)
             return xy[1], column_index_from_string(xy[0])
 
-    if isinstance(coordinate, (tuple, list)) and len(coordinate) == 2:
-        return int(coordinate[0]), int(coordinate[1])
+    if isinstance(coord, (tuple, list)) and len(coord) == 2:
+        return int(coord[0]), int(coord[1])
     else:
         raise ValueError('list或tuple时长度必须为2')

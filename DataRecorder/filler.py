@@ -6,7 +6,7 @@ from typing import Union, List
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
 
-from .base import BaseRecorder, _data_to_list, _parse_coordinate
+from .base import BaseRecorder, _data_to_list, _parse_coord
 
 
 class Filler(BaseRecorder):
@@ -14,7 +14,7 @@ class Filler(BaseRecorder):
 
     def __init__(self,
                  path: Union[str, Path],
-                 cache_size: int = 50,
+                 cache_size: int = None,
                  key_cols: Union[str, int, list, tuple] = 1,
                  begin_row: int = 2,
                  sign_col: Union[str, int] = 2,
@@ -113,14 +113,23 @@ class Filler(BaseRecorder):
         self.data_col = sign or self.data_col
         self.__init__(path, self.cache_size, key_cols, begin_row, sign_col, sign, data_col)
 
-    def add_data(self, data: Union[list, tuple, dict]) -> None:
+    def add_data(self,
+                 data: Union[list, tuple, dict, int, str, float],
+                 coord: Union[list, tuple, str, int] = None) -> None:
         """添加数据                                                                   \n
         数据格式：第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
         :param data: 要添加的内容，第一位为行号，其余为要添加的内容
+        :param coord: 要添加数据的坐标，仅用于添加一行数据
         :return: None
         """
         if not data:
             return
+
+        if coord is not None:
+            coord = _parse_coord(coord, self.data_col)
+            coord = f'{coord[0]},{coord[1]}'
+            data = (coord, data)
+
         if isinstance(data, dict) or isinstance(data[0], (int, str)):  # 只有一个数据的情况
             data = (data,)
 
@@ -151,11 +160,11 @@ class Filler(BaseRecorder):
             self.record()
 
     def set_link(self,
-                 coordinate: Union[int, str, tuple, list],
+                 coord: Union[int, str, tuple, list],
                  link: str,
                  content: Union[int, str, float] = None) -> None:
         """为单元格设置超链接                          \n
-        :param coordinate: 单元格坐标
+        :param coord: 单元格坐标
         :param link: 超链接
         :param content: 单元格内容
         :return: None
@@ -163,7 +172,7 @@ class Filler(BaseRecorder):
         if self.type != 'xlsx':
             raise TypeError('set_link()只支持xlsx格式。')
 
-        self.add_data(('set_link', coordinate, link, content))
+        self.add_data(('set_link', coord, link, content))
 
     def _record(self) -> None:
         """记录数据"""
@@ -274,13 +283,13 @@ def _fill_to_xlsx(file_path: str,
 
     for i in data:
         if i[0] == 'set_link':
-            row, col = _parse_coordinate(i[1], col)
+            row, col = _parse_coord(i[1], col)
             cell = ws.cell(row, col)
             cell.hyperlink = i[2]
             if i[3] is not None:
                 cell.value = i[3]
         else:
-            row, col = _parse_coordinate(i[0], col, (list, tuple))
+            row, col = _parse_coord(i[0], col, (list, tuple))
             for key, j in enumerate(_data_to_list(i[1:], before, after)):
                 ws.cell(row, col + key).value = j
 
@@ -318,7 +327,7 @@ def _fill_to_csv(file_path: str,
 
         for i in data:
             now_data = _data_to_list(i[1:], before, after)
-            row, col = _parse_coordinate(i[0], col, (list, tuple))
+            row, col = _parse_coord(i[0], col, (list, tuple))
 
             # 若行数不够，填充行数
             for _ in range(row - lines_len):
