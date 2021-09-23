@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 from abc import abstractmethod
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell
@@ -175,11 +175,13 @@ class BaseRecorder(object):
 
 def _data_to_list(data: Union[list, tuple, dict],
                   before: Union[list, dict, None] = None,
-                  after: Union[list, dict, None] = None) -> list:
-    """将传入的数据转换为列表形式          \n
+                  after: Union[list, dict, None] = None,
+                  process_content: bool = False) -> list:
+    """将传入的数据转换为列表形式                                  \n
     :param data: 要处理的数据
     :param before: 数据前的列
     :param after: 数据后的列
+    :param process_content: 是否执行process_content处理数据
     :return: 转变成列表方式的数据
     """
     return_list = []
@@ -202,21 +204,24 @@ def _data_to_list(data: Union[list, tuple, dict],
         else:
             return_list.extend([str(i)])
 
-    return_list = [i.value if isinstance(i, Cell) else i for i in return_list]
+    if process_content:
+        return_list = [i.value if isinstance(i, Cell) else i for i in return_list]
     return return_list
 
 
 def _data_to_list_or_dict(data: Union[list, tuple, dict],
                           before: Union[list, tuple, dict, None] = None,
-                          after: Union[list, tuple, dict, None] = None) -> Union[list, dict]:
+                          after: Union[list, tuple, dict, None] = None,
+                          process_content: bool = False) -> Union[list, dict]:
     """将传入的数据转换为列表或字典形式，用于记录到txt或json          \n
     :param data: 要处理的数据
     :param before: 数据前的列
     :param after: 数据后的列
+    :param process_content: 是否执行process_content处理数据
     :return: 转变成列表或字典形式的数据
     """
     if isinstance(data, (list, tuple)):
-        return _data_to_list(data, before, after)
+        return _data_to_list(data, before, after, process_content)
 
     elif isinstance(data, dict):
         if isinstance(before, dict):
@@ -304,3 +309,12 @@ def _parse_coord(coord: Union[int, str, list, tuple],
         return int(coord[0]), int(coord[1])
     else:
         raise ValueError('list或tuple时长度必须为2')
+
+
+def _process_content(content: Any) -> Union[int, str, float, None]:
+    if isinstance(content, (int, str, float, type(None))):
+        return content
+    elif isinstance(content, Cell):
+        return content.value
+    else:
+        return str(content)

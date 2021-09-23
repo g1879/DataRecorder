@@ -44,6 +44,32 @@ class Recorder(BaseRecorder):
             _record_to_json(self.path, self._data, self._before, self._after, self.encoding)
 
 
+def _get_title(data: Union[list, dict],
+               before: Union[list, dict, None] = None,
+               after: Union[list, dict, None] = None) -> Union[list, None]:
+    """获取表头列表                  \n
+    :param data: 数据列表或字典
+    :param before: 数据前的列
+    :param after: 数据后的列
+    :return: 表头列表
+    """
+    if isinstance(data, (tuple, list)):
+        return None
+
+    return_list = []
+    for i in (before, data, after):
+        if isinstance(i, dict):
+            return_list.extend(list(i))
+        elif i is None:
+            pass
+        elif isinstance(i, list):
+            return_list.extend(['' for _ in range(len(i))])
+        else:
+            return_list.extend([''])
+
+    return return_list
+
+
 def _record_to_xlsx(file_path: str,
                     data: list,
                     before: Union[list, tuple, dict] = None,
@@ -68,7 +94,7 @@ def _record_to_xlsx(file_path: str,
             ws.append(title)
 
     for i in data:
-        ws.append(_data_to_list(i, before, after))
+        ws.append(_data_to_list(i, before, after, True))
 
     wb.save(file_path)
     wb.close()
@@ -99,7 +125,7 @@ def _record_to_csv(file_path: str,
         if title:
             csv_write.writerow(title)
         for i in data:
-            csv_write.writerow(_data_to_list(i, before, after))
+            csv_write.writerow(_data_to_list(i, before, after, True))
 
 
 def _record_to_txt(file_path: str,
@@ -116,7 +142,7 @@ def _record_to_txt(file_path: str,
     :return: None
     """
     with open(file_path, 'a+', encoding=encoding) as f:
-        all_data = [f'{_data_to_list_or_dict(i, before, after)}\n' for i in data]
+        all_data = [f'{_data_to_list_or_dict(i, before, after, True)}\n' for i in data]
         f.write(''.join(all_data))
 
 
@@ -140,37 +166,10 @@ def _record_to_json(file_path: str,
             json_data = load(f)
 
         for i in data:
-            i = _data_to_list_or_dict(i, before, after)
-            json_data.append(i)
+            json_data.append(_data_to_list_or_dict(i, before, after, True))
 
     else:
-        json_data = [_data_to_list_or_dict(i, before, after) for i in data]
+        json_data = [_data_to_list_or_dict(i, before, after, True) for i in data]
 
     with open(file_path, 'w', encoding=encoding) as f:
         dump(json_data, f)
-
-
-def _get_title(data: Union[list, dict],
-               before: Union[list, dict, None] = None,
-               after: Union[list, dict, None] = None) -> Union[list, None]:
-    """获取表头列表                  \n
-    :param data: 数据列表或字典
-    :param before: 数据前的列
-    :param after: 数据后的列
-    :return: 表头列表
-    """
-    if isinstance(data, (tuple, list)):
-        return None
-
-    return_list = []
-    for i in (before, data, after):
-        if isinstance(i, dict):
-            return_list.extend(list(i))
-        elif i is None:
-            pass
-        elif isinstance(i, list):
-            return_list.extend(['' for _ in range(len(i))])
-        else:
-            return_list.extend([''])
-
-    return return_list

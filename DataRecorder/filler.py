@@ -6,7 +6,7 @@ from typing import Union, List
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
 
-from .base import BaseRecorder, _data_to_list, _parse_coord
+from .base import BaseRecorder, _data_to_list, _parse_coord, _process_content
 
 
 class Filler(BaseRecorder):
@@ -291,7 +291,7 @@ def _fill_to_xlsx(file_path: str,
         else:
             row, col = _parse_coord(i[0], col, (list, tuple))
             for key, j in enumerate(_data_to_list(i[1:], before, after)):
-                ws.cell(row, col + key).value = j
+                ws.cell(row, col + key).value = _process_content(j)
 
     wb.save(file_path)
     wb.close()
@@ -340,7 +340,7 @@ def _fill_to_csv(file_path: str,
 
             # 填充数据
             for k, j in enumerate(now_data):
-                lines[row_num][col + k - 1] = j
+                lines[row_num][col + k - 1] = _process_content(j)
 
         writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,
                             quotechar=quotechar)
