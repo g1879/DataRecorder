@@ -204,9 +204,7 @@ def _data_to_list(data: Union[list, tuple, dict],
         else:
             return_list.extend([str(i)])
 
-    if process_content:
-        return_list = [i.value if isinstance(i, Cell) else i for i in return_list]
-    return return_list
+    return [_process_content(i) for i in return_list] if process_content else return_list
 
 
 def _data_to_list_or_dict(data: Union[list, tuple, dict],

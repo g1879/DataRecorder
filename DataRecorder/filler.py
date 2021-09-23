@@ -144,13 +144,13 @@ class Filler(BaseRecorder):
 
             if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
                 if isinstance(item[1], dict):
-                    vals = list(item[1].values())
+                    val = list(item[1].values())
                 elif isinstance(item[1], tuple):
-                    vals = list(item[1])
+                    val = list(item[1])
                 else:
-                    vals = item[1]
+                    val = item[1]
                 item = [item[0]]
-                item.extend(vals)
+                item.extend(val)
 
             new_data.append(item)
 
