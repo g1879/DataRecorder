@@ -63,94 +63,62 @@ class MapGun(BaseRecorder):
     def _record(self) -> None:
         """记录数据"""
         if self.type == 'xlsx':
-            _record_to_xlsx(self.path, self._data, self.coord, self._before, self._after)
+            self._to_xlsx()
         elif self.type == 'csv':
-            _record_to_csv(self.path, self._data, self.coord, self._before, self._after, self.encoding,
-                           self.delimiter, self.quote_char)
+            self._to_csv()
 
         if self.float_coord:
             self.coord[0] += len(self._data)
 
+    def _to_xlsx(self) -> None:
+        """记录数据到xlsx文件"""
+        wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
+        ws = wb.active
 
-def _record_to_xlsx(file_path: str,
-                    data: list,
-                    coord: list,
-                    before: Union[list, tuple, dict] = None,
-                    after: Union[list, tuple, dict] = None) -> None:
-    """记录数据到xlsx文件            \n
-    :param file_path: 文件路径
-    :param data: 要记录的数据
-    :param coord: 左上角坐标
-    :param before: 数据前面的列
-    :param after: 数据后面的列
-    :return: None
-    """
-    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
-    ws = wb.active
-
-    row, col = coord
-    for i in data:
-        if not isinstance(i, (list, tuple)):
-            i = (i,)
-        now_data = _data_to_list(i, before, after)
-
-        for ind, j in enumerate(now_data):
-            ws.cell(row, col + ind).value = _process_content(j)
-
-        row += 1
-
-    wb.save(file_path)
-    wb.close()
-
-
-def _record_to_csv(file_path: str,
-                   data: Union[list, tuple],
-                   coord: list,
-                   before: Union[list, dict] = None,
-                   after: Union[list, dict] = None,
-                   encoding: str = 'utf-8',
-                   delimiter: str = ',',
-                   quotechar: str = '"') -> None:
-    """填写数据到xlsx文件            \n
-    :param file_path: 文件路径
-    :param data: 要记录的数据
-    :param coord: 左上角坐标
-    :param before: 数据前面的列
-    :param after: 数据后面的列
-    :param encoding: 字符编码
-    :param delimiter: 分隔符
-    :param quotechar: 引用符
-    :return: None
-    """
-    if not Path(file_path).exists():
-        with open(file_path, 'w', encoding=encoding):
-            pass
-
-    with open(file_path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
-        lines = list(reader)
-        lines_len = len(lines)
-        row, col = coord
-
-        # 若行数不够，填充行数
-        for _ in range(row + len(data) - lines_len):
-            lines.append([])
-
-        # 填入数据
-        for ind, i in enumerate(data):
+        row, col = self.coord
+        for i in self._data:
             if not isinstance(i, (list, tuple)):
                 i = (i,)
 
-            now_data = _data_to_list(i, before, after)
-            row_num = row + ind - 1
+            for ind, j in enumerate(_data_to_list(i, self._before, self._after)):
+                ws.cell(row, col + ind).value = _process_content(j)
 
-            # 若列数不够，填充空列
-            lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
+            row += 1
 
-            # 填充一行数据
-            for k, j in enumerate(now_data):
-                lines[row_num][col + k - 1] = _process_content(j)
+        wb.save(self.path)
+        wb.close()
 
-        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''),
-                            delimiter=delimiter, quotechar=quotechar)
-        writer.writerows(lines)
+    def _to_csv(self) -> None:
+        """填写数据到xlsx文件"""
+        if not Path(self.path).exists():
+            with open(self.path, 'w', encoding=self.encoding):
+                pass
+
+        with open(self.path, 'r', encoding=self.encoding) as f:
+            reader = csv_reader(f, delimiter=self.delimiter, quotechar=self.quote_char)
+            lines = list(reader)
+            lines_len = len(lines)
+            row, col = self.coord
+
+            # 若行数不够，填充行数
+            for _ in range(row + len(self._data) - lines_len):
+                lines.append([])
+
+            # 填入数据
+            for ind, i in enumerate(self._data):
+                if not isinstance(i, (list, tuple)):
+                    i = (i,)
+
+                now_data = _data_to_list(i, self._before, self._after)
+                row_num = row + ind - 1
+
+                # 若列数不够，填充空列
+                lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
+
+                # 填充一行数据
+                for k, j in enumerate(now_data):
+                    lines[row_num][col + k - 1] = _process_content(j)
+
+            writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''),
+                                delimiter=self.delimiter, quotechar=self.quote_char)
+            writer.writerows(lines)

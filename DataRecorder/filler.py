@@ -176,12 +176,10 @@ class Filler(BaseRecorder):
 
     def _record(self) -> None:
         """记录数据"""
-        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
-
         if self.type == 'xlsx':
-            _fill_to_xlsx(self.path, self._data, self._before, self._after, col)
+            self._to_xlsx()
         elif self.type == 'csv':
-            _fill_to_csv(self.path, self._data, self._before, self._after, col, self.encoding)
+            self._to_csv()
 
     def fill(self, func, *args) -> None:
         """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充  \n
@@ -195,6 +193,61 @@ class Filler(BaseRecorder):
             res = [i[0], func(i, *args)]
             self.add_data(res)
         self.record()
+
+    def _to_xlsx(self) -> None:
+        """填写数据到xlsx文件"""
+        wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
+        ws = wb.active
+        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
+
+        for i in self._data:
+            if i[0] == 'set_link':
+                row, col = _parse_coord(i[1], col)
+                cell = ws.cell(row, col)
+                cell.hyperlink = i[2]
+                if i[3] is not None:
+                    cell.value = i[3]
+            else:
+                row, col = _parse_coord(i[0], col, (list, tuple))
+                for key, j in enumerate(_data_to_list(i[1:], self._before, self._after)):
+                    ws.cell(row, col + key).value = _process_content(j)
+
+        wb.save(self.path)
+        wb.close()
+
+    def _to_csv(self) -> None:
+        """填写数据到xlsx文件"""
+        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
+
+        if not Path(self.path).exists():
+            with open(self.path, 'w', encoding=self.encoding):
+                pass
+
+        with open(self.path, 'r', encoding=self.encoding) as f:
+            reader = csv_reader(f, delimiter=self.delimiter, quotechar=self.quote_char)
+            lines = list(reader)
+            lines_len = len(lines)
+
+            for i in self._data:
+                now_data = _data_to_list(i[1:], self._before, self._after)
+                row, col = _parse_coord(i[0], col, (list, tuple))
+
+                # 若行数不够，填充行数
+                for _ in range(row - lines_len):
+                    lines.append([])
+                    lines_len += 1
+
+                row_num = row - 1
+                # 若列数不够，填充空列
+                lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
+
+                # 填充数据
+                for k, j in enumerate(now_data):
+                    lines[row_num][col + k - 1] = _process_content(j)
+
+            writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''), delimiter=self.delimiter,
+                                quotechar=self.quote_char)
+            writer.writerows(lines)
 
 
 def _get_xlsx_keys(path: str,
@@ -263,85 +316,3 @@ def _get_csv_keys(path: str,
                 res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
 
     return res_keys
-
-
-def _fill_to_xlsx(file_path: str,
-                  data: Union[list, tuple],
-                  before: Union[list, dict] = None,
-                  after: Union[list, dict] = None,
-                  col: int = None) -> None:
-    """填写数据到xlsx文件            \n
-    :param file_path: 文件路径
-    :param data: 要记录的数据
-    :param before: 数据前面的列
-    :param after: 数据后面的列
-    :param col: 开始记录的列号
-    :return: None
-    """
-    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
-    ws = wb.active
-
-    for i in data:
-        if i[0] == 'set_link':
-            row, col = _parse_coord(i[1], col)
-            cell = ws.cell(row, col)
-            cell.hyperlink = i[2]
-            if i[3] is not None:
-                cell.value = i[3]
-        else:
-            row, col = _parse_coord(i[0], col, (list, tuple))
-            for key, j in enumerate(_data_to_list(i[1:], before, after)):
-                ws.cell(row, col + key).value = _process_content(j)
-
-    wb.save(file_path)
-    wb.close()
-
-
-def _fill_to_csv(file_path: str,
-                 data: Union[list, tuple],
-                 before: Union[list, dict] = None,
-                 after: Union[list, dict] = None,
-                 col: int = None,
-                 encoding: str = 'utf-8',
-                 delimiter: str = ',',
-                 quotechar: str = '"') -> None:
-    """填写数据到xlsx文件            \n
-    :param file_path: 文件路径
-    :param data: 要记录的数据
-    :param before: 数据前面的列
-    :param after: 数据后面的列
-    :param col: 开始记录的列号
-    :param encoding: 字符编码
-    :param delimiter: 分隔符
-    :param quotechar: 引用符
-    :return: None
-    """
-    if not Path(file_path).exists():
-        with open(file_path, 'w', encoding=encoding):
-            pass
-
-    with open(file_path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
-        lines = list(reader)
-        lines_len = len(lines)
-
-        for i in data:
-            now_data = _data_to_list(i[1:], before, after)
-            row, col = _parse_coord(i[0], col, (list, tuple))
-
-            # 若行数不够，填充行数
-            for _ in range(row - lines_len):
-                lines.append([])
-                lines_len += 1
-
-            row_num = row - 1
-            # 若列数不够，填充空列
-            lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
-
-            # 填充数据
-            for k, j in enumerate(now_data):
-                lines[row_num][col + k - 1] = _process_content(j)
-
-        writer = csv_writer(open(file_path, 'w', encoding=encoding, newline=''), delimiter=delimiter,
-                            quotechar=quotechar)
-        writer.writerows(lines)

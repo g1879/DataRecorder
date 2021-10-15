@@ -297,9 +297,9 @@ def _parse_coord(coord: Union[int, str, list, tuple],
             raise ValueError('只输入行号时必须同时输入列号')
 
     if isinstance(coord, str):
-        if ',' in coord:  # 'A3'形式
+        if ',' in coord:  # '3,1'形式
             coord = coord.replace(' ', '').split(',')
-        else:  # '3,1'形式
+        else:  # 'A3'形式
             xy = coordinate_from_string(coord)
             return xy[1], column_index_from_string(xy[0])
 
@@ -310,6 +310,10 @@ def _parse_coord(coord: Union[int, str, list, tuple],
 
 
 def _process_content(content: Any) -> Union[int, str, float, None]:
+    """处理要写入的数据                  \n
+    :param content: 未处理的数据内容
+    :return: 处理后的数据
+    """
     if isinstance(content, (int, str, float, type(None))):
         return content
     elif isinstance(content, Cell):
