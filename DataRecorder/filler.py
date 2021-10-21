@@ -270,9 +270,13 @@ def _get_xlsx_keys(path: str,
     wb = load_workbook(path, data_only=True, read_only=True)
     ws = wb.active
 
-    res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
-                for ind, row in enumerate(ws.rows, 1)
-                if ind >= begin_row and row[sign_col - 1].value == sign]
+    if sign_col > ws.max_column:
+        res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
+                    for ind, row in enumerate(ws.rows, 1) if ind >= begin_row]
+    else:
+        res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
+                    for ind, row in enumerate(ws.rows, 1)
+                    if ind >= begin_row and row[sign_col - 1].value == sign]
 
     wb.close()
     return res_keys
