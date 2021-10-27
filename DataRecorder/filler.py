@@ -202,15 +202,15 @@ class Filler(BaseRecorder):
 
         for i in self._data:
             if i[0] == 'set_link':
-                row, col = _parse_coord(i[1], col)
-                cell = ws.cell(row, col)
+                row, col1 = _parse_coord(i[1], col)
+                cell = ws.cell(row, col1)
                 cell.hyperlink = i[2]
                 if i[3] is not None:
                     cell.value = i[3]
             else:
-                row, col = _parse_coord(i[0], col, (list, tuple))
+                row, col1 = _parse_coord(i[0], col, (list, tuple))
                 for key, j in enumerate(_data_to_list(i[1:], self._before, self._after)):
-                    ws.cell(row, col + key).value = _process_content(j)
+                    ws.cell(row, col1 + key).value = _process_content(j)
 
         wb.save(self.path)
         wb.close()
@@ -229,8 +229,11 @@ class Filler(BaseRecorder):
             lines_len = len(lines)
 
             for i in self._data:
+                if i[0] == 'set_link':
+                    continue
+
                 now_data = _data_to_list(i[1:], self._before, self._after)
-                row, col = _parse_coord(i[0], col, (list, tuple))
+                row, col1 = _parse_coord(i[0], col, (list, tuple))
 
                 # 若行数不够，填充行数
                 for _ in range(row - lines_len):
@@ -239,11 +242,11 @@ class Filler(BaseRecorder):
 
                 row_num = row - 1
                 # 若列数不够，填充空列
-                lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
+                lines[row_num].extend([None] * (col1 - len(lines[row_num]) + len(now_data) - 1))
 
                 # 填充数据
                 for k, j in enumerate(now_data):
-                    lines[row_num][col + k - 1] = _process_content(j)
+                    lines[row_num][col1 + k - 1] = _process_content(j)
 
             writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''), delimiter=self.delimiter,
                                 quotechar=self.quote_char)
