@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
-from openpyxl.cell import Cell
+from openpyxl.cell import Cell, ReadOnlyCell
 from openpyxl.utils import column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string
 
@@ -316,7 +316,7 @@ def _process_content(content: Any) -> Union[int, str, float, None]:
     """
     if isinstance(content, (int, str, float, type(None))):
         return content
-    elif isinstance(content, Cell):
+    elif isinstance(content, (Cell, ReadOnlyCell)):
         return content.value
     else:
         return str(content)
