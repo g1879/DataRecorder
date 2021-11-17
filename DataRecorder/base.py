@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from abc import abstractmethod
 from pathlib import Path
+from re import sub
 from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
@@ -13,16 +14,18 @@ class BaseRecorder(object):
     """记录器的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
-    def __init__(self, path: Union[str, Path], cache_size: int = None) -> None:
-        """初始化                                  \n
+    def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
+        """初始化                                            \n
         :param path: 保存的文件路径
-        :param cache_size: 每接收多少条记录写入文件
+        :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
         self._data = []
         self._before = []
         self._after = []
         self._type = None
-        self.path = path
+        self._path = None
+        if path:
+            self.set_path(path)
         self.cache_size = cache_size if cache_size is not None else 1000
         self.encoding: str = 'utf-8'
         self.delimiter: str = ','  # csv文件分隔符
@@ -52,8 +55,7 @@ class BaseRecorder(object):
         """返回文件路径"""
         return self._path
 
-    @path.setter
-    def path(self, path: Union[str, Path]) -> None:
+    def set_path(self, path: Union[str, Path]) -> None:
         """设置文件路径                \n
         :param path: 文件路径
         :return: None
@@ -68,7 +70,8 @@ class BaseRecorder(object):
         if self._type not in self.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')
 
-        self.record()  # 更换文件前自动记录剩余数据
+        if self._path:
+            self.record()  # 更换文件前自动记录剩余数据
         self._path = str(path) if isinstance(path, Path) else path
 
     @property
@@ -82,16 +85,16 @@ class BaseRecorder(object):
         return self._data
 
     @property
-    def before(self) -> Union[list, tuple, str, dict]:
+    def before(self) -> Any:
         """返回当前before内容"""
         return self._before
 
     @property
-    def after(self) -> Union[list, tuple, str, dict]:
+    def after(self) -> Any:
         """返回当前after内容"""
         return self._after
 
-    def set_before(self, before: Union[list, tuple, str, dict]) -> None:
+    def set_before(self, before: Any) -> None:
         """设置在数据前面补充的列                              \n
         :param before: 列表、元组或字符串，为字符串时则补充一列
         :return: None
@@ -107,7 +110,7 @@ class BaseRecorder(object):
         else:
             self._before = [before]
 
-    def set_after(self, after: Union[list, tuple, str, dict]) -> None:
+    def set_after(self, after: Any) -> None:
         """设置在数据后面补充的列                                \n
         :param after: 列表、元组或字符串，为字符串时则补充一列
         :return: None
@@ -135,6 +138,9 @@ class BaseRecorder(object):
 
         while True:
             try:
+                if not self.path:
+                    raise ValueError('保存路径为空。')
+
                 self._record()
                 break
 
@@ -172,63 +178,28 @@ class BaseRecorder(object):
     def _record(self):
         pass
 
+    def _data_to_list(self, data: Union[list, tuple, dict]) -> list:
+        """将传入的数据转换为列表形式                                  \n
+        :param data: 要处理的数据
+        :return: 转变成列表方式的数据
+        """
+        return_list = []
+        if data is not None and not isinstance(data, (list, tuple, dict)):
+            data = [data]
 
-def _data_to_list(data: Union[list, tuple, dict],
-                  before: Union[list, dict, None] = None,
-                  after: Union[list, dict, None] = None,
-                  process_content: bool = False) -> list:
-    """将传入的数据转换为列表形式                                  \n
-    :param data: 要处理的数据
-    :param before: 数据前的列
-    :param after: 数据后的列
-    :param process_content: 是否执行process_content处理数据
-    :return: 转变成列表方式的数据
-    """
-    return_list = []
-    if data is not None and not isinstance(data, (list, tuple, dict)):
-        data = [data]
-    if before is not None and not isinstance(before, (list, tuple, dict)):
-        before = [before]
-    if after is not None and not isinstance(after, (list, tuple, dict)):
-        after = [after]
+        for i in (self.before, data, self.after):
+            if isinstance(i, dict):
+                return_list.extend(list(i.values()))
+            elif i is None:
+                pass
+            elif isinstance(i, list):
+                return_list.extend(i)
+            elif isinstance(i, tuple):
+                return_list.extend(list(i))
+            else:
+                return_list.extend([str(i)])
 
-    for i in (before, data, after):
-        if isinstance(i, dict):
-            return_list.extend(list(i.values()))
-        elif i is None:
-            pass
-        elif isinstance(i, list):
-            return_list.extend(i)
-        elif isinstance(i, tuple):
-            return_list.extend(list(i))
-        else:
-            return_list.extend([str(i)])
-
-    return [_process_content(i) for i in return_list] if process_content else return_list
-
-
-def _data_to_list_or_dict(data: Union[list, tuple, dict],
-                          before: Union[list, tuple, dict, None] = None,
-                          after: Union[list, tuple, dict, None] = None,
-                          process_content: bool = False) -> Union[list, dict]:
-    """将传入的数据转换为列表或字典形式，用于记录到txt或json          \n
-    :param data: 要处理的数据
-    :param before: 数据前的列
-    :param after: 数据后的列
-    :param process_content: 是否执行process_content处理数据
-    :return: 转变成列表或字典形式的数据
-    """
-    if isinstance(data, (list, tuple)):
-        return _data_to_list(data, before, after, process_content)
-
-    elif isinstance(data, dict):
-        if isinstance(before, dict):
-            data = {**before, **data}
-
-        if isinstance(after, dict):
-            data = {**data, **after}
-
-        return data
+        return return_list
 
 
 def _set_csv_head(file_path: str,
@@ -251,7 +222,7 @@ def _set_csv_head(file_path: str,
 
         with open(file_path, 'w', newline='', encoding=encoding) as f:
             csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
-            csv_write.writerow(head)
+            csv_write.writerow(_ok_list(head))
 
         with open(file_path, 'a+', newline='', encoding=encoding) as f:
             f.write(f'{content}')
@@ -259,7 +230,7 @@ def _set_csv_head(file_path: str,
     else:
         with open(file_path, 'w', newline='', encoding=encoding) as f:
             csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
-            csv_write.writerow(head)
+            csv_write.writerow(_ok_list(head))
 
 
 def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
@@ -272,7 +243,7 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
     ws = wb.active
 
     for key, i in enumerate(head, 1):
-        ws.cell(1, key).value = i
+        ws.cell(1, key).value = _process_content(i, True)
 
     wb.save(file_path)
     wb.close()
@@ -309,14 +280,28 @@ def _parse_coord(coord: Union[int, str, list, tuple],
         raise ValueError('list或tuple时长度必须为2')
 
 
-def _process_content(content: Any) -> Union[int, str, float, None]:
+def _process_content(content: Any, excel: bool = False) -> Union[int, str, float, None]:
     """处理要写入的数据                  \n
     :param content: 未处理的数据内容
     :return: 处理后的数据
     """
     if isinstance(content, (int, str, float, type(None))):
-        return content
+        data = content
     elif isinstance(content, (Cell, ReadOnlyCell)):
-        return content.value
+        data = content.value
     else:
-        return str(content)
+        data = str(content)
+
+    if excel and isinstance(data, str):
+        data = sub(r'[\000-\010]|[\013-\014]|[\016-\037]', '', data)
+
+    return data
+
+
+def _ok_list(data_list: list, excel: bool = False) -> list:
+    """处理列表中数据使其符合保存规范             \n
+    :param data_list: 数据列表
+    :param excel: 是否保存在excel
+    :return: 处理后的列表
+    """
+    return [_process_content(i, excel) for i in data_list]

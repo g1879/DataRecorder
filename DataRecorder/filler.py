@@ -6,7 +6,7 @@ from typing import Union, List
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
 
-from .base import BaseRecorder, _data_to_list, _parse_coord, _process_content
+from .base import BaseRecorder, _parse_coord, _process_content
 
 
 class Filler(BaseRecorder):
@@ -29,7 +29,8 @@ class Filler(BaseRecorder):
         :param sign: 按这个值判断是否已填数据
         :param data_col: 要填入数据的第一列，从1开始
         """
-        super().__init__(path, cache_size)
+        super().__init__(None, cache_size)
+        super().set_path(path)
         self.key_cols = key_cols
         self.begin_row = begin_row
         self.sign_col = sign_col
@@ -92,7 +93,7 @@ class Filler(BaseRecorder):
 
     def set_path(self,
                  path: Union[str, Path],
-                 key_cols: Union[str, int, list, tuple] = 1,
+                 key_cols: Union[str, int, list, tuple] = None,
                  begin_row: int = None,
                  sign_col: Union[str, int] = None,
                  sign: str = None,
@@ -105,13 +106,14 @@ class Filler(BaseRecorder):
         :param sign: 按这个值判断是否已填数据
         :param data_col: 要填入数据的第一列
         """
-        if not Path(path).exists():
+        if not path or not Path(path).exists():
             raise FileNotFoundError('文件不存在')
+        super().set_path(path)
+        self.key_cols = key_cols or self.key_cols
         self.begin_row = begin_row or self.begin_row
         self.sign_col = sign_col or self.sign_col
         self.sign = sign or self.sign
-        self.data_col = sign or self.data_col
-        self.__init__(path, self.cache_size, key_cols, begin_row, sign_col, sign, data_col)
+        self.data_col = data_col or self.data_col
 
     def add_data(self,
                  data: Union[list, tuple, dict, int, str, float],
@@ -206,11 +208,11 @@ class Filler(BaseRecorder):
                 cell = ws.cell(row, col1)
                 cell.hyperlink = i[2]
                 if i[3] is not None:
-                    cell.value = i[3]
+                    cell.value = _process_content(i[3], True)
             else:
                 row, col1 = _parse_coord(i[0], col, (list, tuple))
-                for key, j in enumerate(_data_to_list(i[1:], self._before, self._after)):
-                    ws.cell(row, col1 + key).value = _process_content(j)
+                for key, j in enumerate(self._data_to_list(i[1:])):
+                    ws.cell(row, col1 + key).value = _process_content(j, True)
 
         wb.save(self.path)
         wb.close()
@@ -232,7 +234,7 @@ class Filler(BaseRecorder):
                 if i[0] == 'set_link':
                     continue
 
-                now_data = _data_to_list(i[1:], self._before, self._after)
+                now_data = self._data_to_list(i[1:])
                 row, col1 = _parse_coord(i[0], col, (list, tuple))
 
                 # 若行数不够，填充行数

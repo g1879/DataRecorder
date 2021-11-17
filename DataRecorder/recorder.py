@@ -4,7 +4,7 @@ from typing import Union
 
 from openpyxl import Workbook, load_workbook
 
-from .base import BaseRecorder, _data_to_list, _data_to_list_or_dict
+from .base import BaseRecorder, _ok_list
 
 
 class Recorder(BaseRecorder):
@@ -53,10 +53,10 @@ class Recorder(BaseRecorder):
             ws = wb.create_sheet()
             title = _get_title(self._data[0], self._before, self._after)
             if title is not None:
-                ws.append(title)
+                ws.append(_ok_list(title, True))
 
         for i in self._data:
-            ws.append(_data_to_list(i, self._before, self._after, True))
+            ws.append(_ok_list(self._data_to_list(i), True))
 
         wb.save(self.path)
         wb.close()
@@ -69,14 +69,14 @@ class Recorder(BaseRecorder):
         with open(self.path, 'a+', newline='', encoding=self.encoding) as f:
             csv_write = writer(f, delimiter=self.delimiter, quotechar=self.quote_char)
             if title:
-                csv_write.writerow(title)
+                csv_write.writerow(_ok_list(title))
             for i in self._data:
-                csv_write.writerow(_data_to_list(i, self._before, self._after, True))
+                csv_write.writerow(_ok_list(self._data_to_list(i)))
 
     def _to_txt(self) -> None:
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [f'{_data_to_list_or_dict(i, self._before, self._after, True)}\n' for i in
+            all_data = [f'{_ok_list(self._data_to_list_or_dict(i))}\n' for i in
                         self._data]
             f.write(''.join(all_data))
 
@@ -88,13 +88,30 @@ class Recorder(BaseRecorder):
                 json_data = load(f)
 
             for i in self._data:
-                json_data.append(_data_to_list_or_dict(i, self._before, self._after, True))
+                json_data.append(_ok_list(self._data_to_list_or_dict(i)))
 
         else:
-            json_data = [_data_to_list_or_dict(i, self._before, self._after, True) for i in self._data]
+            json_data = [_ok_list(self._data_to_list_or_dict(i)) for i in self._data]
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
+
+    def _data_to_list_or_dict(self, data: Union[list, tuple, dict]) -> Union[list, dict]:
+        """将传入的数据转换为列表或字典形式，用于记录到txt或json          \n
+        :param data: 要处理的数据
+        :return: 转变成列表或字典形式的数据
+        """
+        if isinstance(data, (list, tuple)):
+            return self._data_to_list(data)
+
+        elif isinstance(data, dict):
+            if isinstance(self.before, dict):
+                data = {**self.before, **data}
+
+            if isinstance(self.after, dict):
+                data = {**data, **self.after}
+
+            return data
 
 
 def _get_title(data: Union[list, dict],

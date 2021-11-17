@@ -5,13 +5,13 @@ from typing import Union
 
 from openpyxl import load_workbook, Workbook
 
-from .base import BaseRecorder, _data_to_list, _parse_coord, _process_content
+from .base import BaseRecorder, _parse_coord, _process_content
 
 
 class MapGun(BaseRecorder):
     """把二维数据填充到以左上角坐标为起点的范围"""
 
-    def __init__(self, path: Union[str, Path],
+    def __init__(self, path: Union[str, Path] = None,
                  coord: Union[str, tuple, list] = None,
                  float_coord: bool = True):
         """初始化                                              \n
@@ -80,8 +80,8 @@ class MapGun(BaseRecorder):
             if not isinstance(i, (list, tuple)):
                 i = (i,)
 
-            for ind, j in enumerate(_data_to_list(i, self._before, self._after)):
-                ws.cell(row, col + ind).value = _process_content(j)
+            for ind, j in enumerate(self._data_to_list(i)):
+                ws.cell(row, col + ind).value = _process_content(j, True)
 
             row += 1
 
@@ -109,7 +109,7 @@ class MapGun(BaseRecorder):
                 if not isinstance(i, (list, tuple)):
                     i = (i,)
 
-                now_data = _data_to_list(i, self._before, self._after)
+                now_data = self._data_to_list(i)
                 row_num = row + ind - 1
 
                 # 若列数不够，填充空列
