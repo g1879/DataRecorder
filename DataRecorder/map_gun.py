@@ -55,6 +55,8 @@ class MapGun(BaseRecorder):
         :param coord: 左上角坐标
         :return: None
         """
+        if not isinstance(data, (list, tuple)):
+            raise TypeError(f'只能接受list和tuple格式数据，不能是{type(data)}')
         if coord is not None:
             self.coord = coord
         self._data = data

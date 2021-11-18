@@ -55,25 +55,6 @@ class BaseRecorder(object):
         """返回文件路径"""
         return self._path
 
-    def set_path(self, path: Union[str, Path]) -> None:
-        """设置文件路径                \n
-        :param path: 文件路径
-        :return: None
-        """
-        if isinstance(path, str):
-            self._type = path.split('.')[-1]
-        elif isinstance(path, Path):
-            self._type = path.suffix[1:]
-        else:
-            raise TypeError(f'参数file_path只能是str或Path，非{type(path)}。')
-
-        if self._type not in self.SUPPORTS:
-            raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')
-
-        if self._path:
-            self.record()  # 更换文件前自动记录剩余数据
-        self._path = str(path) if isinstance(path, Path) else path
-
     @property
     def type(self) -> str:
         """返回文件类型"""
@@ -93,6 +74,26 @@ class BaseRecorder(object):
     def after(self) -> Any:
         """返回当前after内容"""
         return self._after
+
+    def set_path(self, path: Union[str, Path]) -> None:
+        """设置文件路径                \n
+        :param path: 文件路径
+        :return: None
+        """
+        if isinstance(path, str):
+            self._type = path.split('.')[-1]
+        elif isinstance(path, Path):
+            self._type = path.suffix[1:]
+        else:
+            raise TypeError(f'参数file_path只能是str或Path，非{type(path)}。')
+
+        if self._type not in self.SUPPORTS:
+            raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')
+
+        if self._path:
+            self.record()  # 更换文件前自动记录剩余数据
+
+        self._path = str(path) if isinstance(path, Path) else path
 
     def set_before(self, before: Any) -> None:
         """设置在数据前面补充的列                              \n

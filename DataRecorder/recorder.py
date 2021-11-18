@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
-from typing import Union
+from typing import Union, Any
 
 from openpyxl import Workbook, load_workbook
 
@@ -13,7 +13,7 @@ class Recorder(BaseRecorder):
     """
     SUPPORTS = ('xlsx', 'csv', 'json', 'txt')
 
-    def add_data(self, data: Union[list, tuple, dict, int, float, str]) -> None:
+    def add_data(self, data: Any) -> None:
         """添加数据，可一次添加多条数据                  \n
         :param data: 插入的数据，元组或列表
         :return: None

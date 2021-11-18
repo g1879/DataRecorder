@@ -96,7 +96,7 @@ class Filler(BaseRecorder):
                  key_cols: Union[str, int, list, tuple] = None,
                  begin_row: int = None,
                  sign_col: Union[str, int] = None,
-                 sign: str = None,
+                 sign: Union[int, float, str] = None,
                  data_col: int = None) -> None:
         """设置文件路径                             \n
         :param path: 保存的文件路径
@@ -116,7 +116,7 @@ class Filler(BaseRecorder):
         self.data_col = data_col or self.data_col
 
     def add_data(self,
-                 data: Union[list, tuple, dict, int, str, float],
+                 data: Union[list, tuple, dict],
                  coord: Union[list, tuple, str, int] = None) -> None:
         """添加数据                                                                   \n
         数据格式：第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
@@ -124,8 +124,8 @@ class Filler(BaseRecorder):
         :param coord: 要添加数据的坐标，仅用于添加一行数据
         :return: None
         """
-        if not data:
-            return
+        if not isinstance(data, (list, tuple, dict)):
+            raise TypeError(f'只能接受list、tuple和dict格式数据，不能是{type(data)}')
 
         if coord is not None:
             coord = _parse_coord(coord, self.data_col)
@@ -258,7 +258,7 @@ class Filler(BaseRecorder):
 def _get_xlsx_keys(path: str,
                    begin_row: int,
                    sign_col: Union[int, str],
-                   sign: str,
+                   sign: Union[int, float, str],
                    key_cols: Union[list, tuple]) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
@@ -290,7 +290,7 @@ def _get_xlsx_keys(path: str,
 def _get_csv_keys(path: str,
                   begin_row: int,
                   sign_col: Union[int, str],
-                  sign: str,
+                  sign: Union[int, float, str],
                   key_cols: Union[list, tuple],
                   encoding: str,
                   delimiter: str,
