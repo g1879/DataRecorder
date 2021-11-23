@@ -171,9 +171,6 @@ class Filler(BaseRecorder):
         :param content: 单元格内容
         :return: None
         """
-        if self.type != 'xlsx':
-            raise TypeError('set_link()只支持xlsx格式。')
-
         self.add_data(('set_link', coord, link, content))
 
     def _record(self) -> None:
@@ -206,7 +203,7 @@ class Filler(BaseRecorder):
             if i[0] == 'set_link':
                 row, col1 = _parse_coord(i[1], col)
                 cell = ws.cell(row, col1)
-                cell.hyperlink = i[2]
+                cell.hyperlink = _process_content(i[2], True)
                 if i[3] is not None:
                     cell.value = _process_content(i[3], True)
             else:
@@ -232,10 +229,12 @@ class Filler(BaseRecorder):
 
             for i in self._data:
                 if i[0] == 'set_link':
-                    continue
-
-                now_data = self._data_to_list(i[1:])
-                row, col1 = _parse_coord(i[0], col, (list, tuple))
+                    txt = i[3] or i[2]
+                    now_data = f'=HYPERLINK("{i[2]}","{txt}")'
+                    row, col1 = _parse_coord(i[1], col)
+                else:
+                    now_data = self._data_to_list(i[1:])
+                    row, col1 = _parse_coord(i[0], col, (list, tuple))
 
                 # 若行数不够，填充行数
                 for _ in range(row - lines_len):
