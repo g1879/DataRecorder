@@ -131,8 +131,11 @@ class BaseRecorder(object):
         """清空缓存中的数据"""
         self._data = []
 
-    def record(self) -> None:
-        """记录数据"""
+    def record(self, path: Union[str, Path] = None) -> None:
+        """记录数据                                        \n
+        :param path: 文件另存为的位置，设置了之后会保存新文件
+        :return: None
+        """
         # 具体功能由_record()实现，本方法实现自动重试功能
         if not self._data:
             return
@@ -142,7 +145,16 @@ class BaseRecorder(object):
                 if not self.path:
                     raise ValueError('保存路径为空。')
 
+                tmp_path = self.path
+                if path:
+                    # TODO: 复制一个新文件
+                    self._path = str(path) if isinstance(path, Path) else path
+
                 self._record()
+
+                if path:
+                    self._path = tmp_path
+
                 break
 
             except PermissionError:
