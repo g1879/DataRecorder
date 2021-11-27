@@ -15,7 +15,7 @@
 - 可以缓存数据到一定数量再一次写入，减少文件读写次数，降低开销。
 - 可以在程序崩溃时自动保存或显示剩余数据，避免数据丢失。
 - 可以以表格某些列作为关键字，获取或处理数据后填回表格。
-- 可直接接收 Openpyxl 的 Cell 对象记录数据。
+- 可直接接收 openpyxl 的 Cell 对象记录数据。
 - 支持 xlsx、csv、json、txt 格式。
 
 # 简单演示
@@ -99,7 +99,7 @@ r.after  #  补充在后面的列数据
 
 ```python
 r.add_data(data)  # 插入一条或多条数据
-r.record()  # 主动保存数据
+r.record(new_path)  # 主动保存数据，可指定另存为的路径
 r.clear()  # 清空缓存中的数据
 r.set_before(before)  # 设置在数据前面补充的列
 r.set_after(after)  # 设置在数据后面补充的列
@@ -164,7 +164,7 @@ f.after  #  补充在后面的列数据
 ```python
 f.set_path()  # 更改文件路径，参数和__init__()一致
 f.add_data()  # 插入一条或多条数据，数据第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
-f.record()  # 主动保存数据
+f.record(new_path)  # 主动保存数据，可指定另存为的路径
 f.fill(func, *args)  # 接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充。方法第一个参数必须是keys，用于接收关键字列
 f.set_head(head)  # 设置表头
 f.set_link(coord, link, content)  # 为单元格设置超链接

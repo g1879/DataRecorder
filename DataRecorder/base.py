@@ -131,30 +131,31 @@ class BaseRecorder(object):
         """清空缓存中的数据"""
         self._data = []
 
-    def record(self, path: Union[str, Path] = None) -> None:
-        """记录数据                                        \n
-        :param path: 文件另存为的位置，设置了之后会保存新文件
-        :return: None
+    def record(self, new_path: Union[str, Path] = None) -> str:
+        """记录数据，可保存到新文件                                \n
+        :param new_path: 文件另存为的路径，会保存新文件
+        :return: 返回记录文件的路径
         """
-        # 具体功能由_record()实现，本方法实现自动重试功能
+        # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
+        original_path = return_path = self._path
+        if new_path:
+            from g1879.paths import get_usable_path
+            new_path = str(get_usable_path(new_path))
+            return_path = self._path = new_path
+
+            if Path(original_path).exists():
+                from shutil import copy
+                copy(original_path, self._path)
+
         if not self._data:
-            return
+            return return_path
+
+        if not self._path:
+            raise ValueError('保存路径为空。')
 
         while True:
             try:
-                if not self.path:
-                    raise ValueError('保存路径为空。')
-
-                tmp_path = self.path
-                if path:
-                    # TODO: 复制一个新文件
-                    self._path = str(path) if isinstance(path, Path) else path
-
                 self._record()
-
-                if path:
-                    self._path = tmp_path
-
                 break
 
             except PermissionError:
@@ -167,7 +168,11 @@ class BaseRecorder(object):
                     raise
                 break
 
+        if new_path:
+            self._path = original_path
+
         self._data = []
+        return return_path
 
     def set_head(self, head: Union[list, tuple]) -> None:
         """设置表头。只有 csv 和 xlsx 格式支持设置表头       \n
