@@ -4,6 +4,7 @@ from pathlib import Path
 from re import sub
 from typing import Union, Tuple, Any
 
+from g1879.paths import get_usable_path
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell, ReadOnlyCell
 from openpyxl.utils import column_index_from_string
@@ -139,7 +140,6 @@ class BaseRecorder(object):
         # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
         original_path = return_path = self._path
         if new_path:
-            from g1879.paths import get_usable_path
             new_path = str(get_usable_path(new_path))
             return_path = self._path = new_path
 
