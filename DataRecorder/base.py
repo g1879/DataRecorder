@@ -4,11 +4,12 @@ from pathlib import Path
 from re import sub
 from typing import Union, Tuple, Any
 
-from g1879.paths import get_usable_path
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell, ReadOnlyCell
 from openpyxl.utils import column_index_from_string
 from openpyxl.utils.cell import coordinate_from_string
+
+from .tools import get_usable_path
 
 
 class BaseRecorder(object):

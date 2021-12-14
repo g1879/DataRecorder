@@ -6,7 +6,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="DataRecorder",
-    version="1.3.1",
+    version="1.3.2",
     author="g1879",
     author_email="g1879@qq.com",
     description="用于记录数据的模块。",
@@ -18,8 +18,7 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     install_requires=[
-        "openpyxl",
-        "g1879"
+        "openpyxl"
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
