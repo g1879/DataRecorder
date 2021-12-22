@@ -275,6 +275,7 @@ def _get_xlsx_keys(path: str,
     ws = wb.active
 
     if ws.max_column is None:  # 遇到过read_only时无法获取列数的文件
+        wb.close()
         wb = load_workbook(path, data_only=True)
         ws = wb.active
 
