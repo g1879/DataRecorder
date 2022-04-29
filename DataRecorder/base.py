@@ -83,13 +83,13 @@ class BaseRecorder(object):
         :return: None
         """
         if isinstance(path, str):
-            self._type = path.split('.')[-1]
+            self._type = path.split('.')[-1].lower()
         elif isinstance(path, Path):
-            self._type = path.suffix[1:]
+            self._type = path.suffix[1:].lower()
         else:
             raise TypeError(f'参数file_path只能是str或Path，非{type(path)}。')
 
-        if self._type not in self.SUPPORTS:
+        if self._type not in self.SUPPORTS and 'any' not in self.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')
 
         if self._path:
@@ -317,10 +317,14 @@ def _process_content(content: Any, excel: bool = False) -> Union[int, str, float
     return data
 
 
-def _ok_list(data_list: list, excel: bool = False) -> list:
+def _ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = False) -> list:
     """处理列表中数据使其符合保存规范             \n
     :param data_list: 数据列表
     :param excel: 是否保存在excel
     :return: 处理后的列表
     """
+    if isinstance(data_list, dict):
+        data_list = data_list.values()
+    if as_str:
+        data_list = [str(i) for i in data_list]
     return [_process_content(i, excel) for i in data_list]

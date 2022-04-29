@@ -11,7 +11,7 @@ class Recorder(BaseRecorder):
     """用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。
     退出时能自动记录数据（xlsx格式除外），避免因异常丢失。
     """
-    SUPPORTS = ('xlsx', 'csv', 'json', 'txt')
+    SUPPORTS = ('any',)
 
     def add_data(self, data: Any) -> None:
         """添加数据，可一次添加多条数据                  \n
@@ -37,10 +37,10 @@ class Recorder(BaseRecorder):
             self._to_xlsx()
         elif self.type == 'csv':
             self._to_csv()
-        elif self.type == 'txt':
-            self._to_txt()
         elif self.type == 'json':
             self._to_json()
+        else:
+            self._to_txt()
 
     def _to_xlsx(self) -> None:
         """记录数据到xlsx文件"""
@@ -76,9 +76,8 @@ class Recorder(BaseRecorder):
     def _to_txt(self) -> None:
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [f'{_ok_list(self._data_to_list_or_dict(i))}\n' for i in
-                        self._data]
-            f.write(''.join(all_data))
+            all_data = [' '.join(_ok_list(self._data_to_list_or_dict(i), as_str=True)) for i in self._data]
+            f.write('\n'.join(all_data) + '\n')
 
     def _to_json(self) -> None:
         """记录数据到json文件"""

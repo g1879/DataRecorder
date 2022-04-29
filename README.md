@@ -70,11 +70,10 @@ from DataRecorder import Recorder  # 记录器
 from DataRecorder import Filler  # 填充器
 ```
 
-
-
 ## Recorder 类
 
-Recorder 用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。退出时能自动记录数据，避免因异常丢失。支持 xlsx、csv、json、txt 格式。
+Recorder 用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。退出时能自动记录数据，避免因异常丢失。支持 xlsx、csv、json、txt 格式。如果指定这几种格式以外的文件，会自动以 txt
+方式进行记录。
 
 ### 创建 Recorder 对象
 
@@ -227,4 +226,3 @@ m.set_head(head)  # 设置表头
 from DataRecorder.tootls import align_csv
 align_csv(path, encoding, delimiter, quotechar)  # 传入要处理的文件路径及编码，分隔符j
 ```
-
