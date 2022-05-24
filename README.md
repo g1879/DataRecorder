@@ -6,7 +6,7 @@
 
 在网上爬取数据的时候，常常需要把数据保存到文件，频繁的开关文件会影响效率，而如果等等爬取结束再写入，会有因异常而导致数据丢失的风险。因此写了一个小工具（Recorder），须要保存数据时只要把数据扔进去，它会把数据缓存到一定数量再一次写入，而且在程序崩溃时能自动保存数据，保证数据的可靠性。同时，本工具最新版支持多线程同时写入。
 
-后来增加了一个功能（Filler），从已有文件中读取关键字，爬取数据后自动回填。这样对断点续爬提供了良好的支持，封装了常用的功能，减轻了编码量，让程序员可把更多精力放在业务逻辑。
+后来增加了一个功能（Filler），用于专门处理表格文件（csv 或 xlsx）。可向指定坐标或行录入数据；可从已有文件中读取关键字，爬取数据后自动回填。这样对断点续爬提供了良好的支持，封装了常用的功能，减轻了编码量，让程序员可把更多精力放在业务逻辑。
 
 后来又增加了一个功能（MapGun），可以把二维数据一次填入 csv 或 xlsx 文件指定左上角坐标的区域中。
 
@@ -14,33 +14,44 @@
 
 - 可以缓存数据到一定数量再一次写入，减少文件读写次数，降低开销。
 - 支持多线程同时写入数据。
-- 可以在程序崩溃时自动保存或显示剩余数据，避免数据丢失。
+- 可以在程序崩溃时自动保存，失败时显示剩余数据。
+- 写入时如文件打开，会自动等待文件关闭再写入，避免数据丢失。
 - 可以以表格某些列作为关键字，获取或处理数据后填回表格。
 - 可直接接收 openpyxl 的 Cell 对象记录数据。
 - 支持 xlsx、csv、json、txt 格式。
+- 
 
 # 简单演示
 
-Recorder 演示
+下面这些示例可直接运行（除了第3个）
+
+1、记录多行数据
 
 ```python
 from DataRecorder import Recorder
 
-file = 'results.csv'  # 用于记录数据的文件
-r = Recorder(file, 50)  # 50表示每50条记录写入一次文件
+r = Recorder('results.csv', 50)  # 50表示每50条记录写入一次文件
 for _ in range(100):  # 产生100条数据
     data = (1, 2, 3, 4)
     r.add_data(data)  # 插入一条数据（也可把多条数据放在列表里一次写入）
-# 程序结束时自动保存文件
 ```
 
-Filler 演示
+2、对表格坐标录入数据
 
 ```python
 from DataRecorder import Filler
 
-file = 'results.csv'
-f = Filler(file, key_cols='A', sign_col='B')
+f = Filler('results.csv')
+f.add_data(('A2', 1, 2, 3, 4))  # 向 A2 单元格写入数据
+f.add_data((1, 2, 3, 4), (3, 4))  # 向第3行第4列开始的单元格写入一行数据
+```
+
+3、根据某列数据对其它列填充数据
+
+```python
+from DataRecorder import Filler
+
+f = Filler('results.csv', key_cols='A', sign_col='B')
 # =============方法一=============
 for key in f.keys:  # 所有未填充行的key列
     data = do_sth(key, *args)  # 处理数据的方法，第一个参数必须是接收key值
@@ -50,7 +61,7 @@ for key in f.keys:  # 所有未填充行的key列
 f.fill(do_sth, *args)  # 调用处理数据方法，自动填充数据
 ```
 
-MapGun 演示
+4、向表格文件写入一整片二维数据
 
 ```python
 from DataRecorder import MapGun
@@ -61,22 +72,56 @@ data = ((1, 2),
 m.add_data(data, 'c4')  # 把二维数据填入以 c4 为左上角的区域中
 ```
 
-多线程同时写入
+5、多线程同时写入
 
 ```python
 from DataRecorder import Recorder
 from threading import Thread
 
-
 def add(recorder: Recorder):
     recorder.add_data((1, 2, 3, 4))
-
 
 def main():
     r = Recorder('results.csv')
     for _ in range(5):  # 创建 5 个线程，每个都向文件写入数据
         Thread(target=add, args=(r,)).start()
 
+if __name__ == '__main__':
+    main()
+```
+
+# 注意事项
+
+如果记录文件格式为 xlsx，程序退出自动记录功能无法使用，须显式调用`record()`方法，或把记录器声明放在一个方法内。
+
+错误做法：
+
+```python
+from DataRecorder import Recorder
+
+r = Recorder('test.xlsx')  # 使用 xlsx 格式
+r.add_data('abc')
+# 不显式调用 record()方法
+```
+
+正确做法1，显式调用`record()`方法：
+
+```python
+from DataRecorder import Recorder
+
+r = Recorder('test.xlsx')  # 使用 xlsx 格式
+r.add_data('abc')
+r.record()  # 显式调用 record()方法
+```
+
+正确做法2，把对象声明放在方法体内：
+
+```python
+from DataRecorder import Recorder
+
+def main():
+    r = Recorder('test.xlsx')  # r 的声明放在方法体内
+    r.add_data('abc')
 
 if __name__ == '__main__':
     main()
@@ -102,8 +147,7 @@ from DataRecorder import MapGun  # 范围填充器
 
 ## 记录器：Recorder 类
 
-Recorder 用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。退出时能自动记录数据，避免因异常丢失。支持 xlsx、csv、json、txt 格式。如果指定这几种格式以外的文件，会自动以 txt
-方式进行记录。
+Recorder 用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。退出时能自动记录数据，避免因异常丢失。支持 xlsx、csv、json、txt 格式。如果指定这几种格式以外的文件，会自动以 txt 方式进行记录。
 
 ### 创建 Recorder 对象
 
