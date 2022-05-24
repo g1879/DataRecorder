@@ -4,15 +4,16 @@
 
 ## 背景
 
-在网上爬取数据的时候，常常需要把数据保存到文件，频繁的开关文件会影响效率，而如果等等爬取结束再写入，会有因异常而导致数据丢失的风险。因此写了一个小工具，须要保存数据时只要把数据扔进去，它会把数据缓存到一定数量再一次写入，而且在程序崩溃时能自动保存数据，保证数据的可靠性。
+在网上爬取数据的时候，常常需要把数据保存到文件，频繁的开关文件会影响效率，而如果等等爬取结束再写入，会有因异常而导致数据丢失的风险。因此写了一个小工具（Recorder），须要保存数据时只要把数据扔进去，它会把数据缓存到一定数量再一次写入，而且在程序崩溃时能自动保存数据，保证数据的可靠性。同时，本工具最新版支持多线程同时写入。
 
-后来增加了一个功能，从已有文件中读取关键字，爬取数据后自动回填。这样对断点续爬提供了良好的支持，封装了常用的功能，减轻了编码量，让程序员可把更多精力放在业务逻辑。
+后来增加了一个功能（Filler），从已有文件中读取关键字，爬取数据后自动回填。这样对断点续爬提供了良好的支持，封装了常用的功能，减轻了编码量，让程序员可把更多精力放在业务逻辑。
 
-后来又增加了一个功能，可以把二维数据一次填入 csv 或 xlsx 文件指定左上角坐标的区域中。
+后来又增加了一个功能（MapGun），可以把二维数据一次填入 csv 或 xlsx 文件指定左上角坐标的区域中。
 
 ## 特性
 
 - 可以缓存数据到一定数量再一次写入，减少文件读写次数，降低开销。
+- 支持多线程同时写入数据。
 - 可以在程序崩溃时自动保存或显示剩余数据，避免数据丢失。
 - 可以以表格某些列作为关键字，获取或处理数据后填回表格。
 - 可直接接收 openpyxl 的 Cell 对象记录数据。
@@ -23,17 +24,21 @@
 Recorder 演示
 
 ```python
+from DataRecorder import Recorder
+
 file = 'results.csv'  # 用于记录数据的文件
 r = Recorder(file, 50)  # 50表示每50条记录写入一次文件
 for _ in range(100):  # 产生100条数据
     data = (1, 2, 3, 4)
-    r.add_data(data)  # 插入一条数据（也可一次插入多条）
+    r.add_data(data)  # 插入一条数据（也可把多条数据放在列表里一次写入）
 # 程序结束时自动保存文件
 ```
 
 Filler 演示
 
 ```python
+from DataRecorder import Filler
+
 file = 'results.csv'
 f = Filler(file, key_cols='A', sign_col='B')
 # =============方法一=============
@@ -48,14 +53,36 @@ f.fill(do_sth, *args)  # 调用处理数据方法，自动填充数据
 MapGun 演示
 
 ```python
-file = 'results.csv'
-m = MapGun(file)
+from DataRecorder import MapGun
+
+m = MapGun('results.csv')
 data = ((1, 2),
         (3, 4))
 m.add_data(data, 'c4')  # 把二维数据填入以 c4 为左上角的区域中
 ```
 
-# 使用方法
+多线程同时写入
+
+```python
+from DataRecorder import Recorder
+from threading import Thread
+
+
+def add(recorder: Recorder):
+    recorder.add_data((1, 2, 3, 4))
+
+
+def main():
+    r = Recorder('results.csv')
+    for _ in range(5):  # 创建 5 个线程，每个都向文件写入数据
+        Thread(target=add, args=(r,)).start()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+# 安装与导入
 
 ## 安装
 
@@ -68,9 +95,12 @@ pip install DataRecorder
 ```python
 from DataRecorder import Recorder  # 记录器
 from DataRecorder import Filler  # 填充器
+from DataRecorder import MapGun  # 范围填充器
 ```
 
-## Recorder 类
+# 使用方法
+
+## 记录器：Recorder 类
 
 Recorder 用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。退出时能自动记录数据，避免因异常丢失。支持 xlsx、csv、json、txt 格式。如果指定这几种格式以外的文件，会自动以 txt
 方式进行记录。
@@ -117,7 +147,7 @@ r.set_head(head)  # 设置表头。只有 csv 和 xlsx 格式支持设置表头
 - 指定保存文件的路径不必已经存在，会自动创建
 - 使用 set_head() 方法会覆盖第一行数据，对原来没有表头的文件慎用
 
-## Filler 类
+## 填充器：Filler 类
 
 Filler 类主要用于对已有数据的表格文件进行填充，也可指定要填写数据的单元格，直接向其填数据。支持 xlsx 和 csv 格式。
 
@@ -177,7 +207,7 @@ f.set_link(coord, link, content)  # 为单元格设置超链接
 
 **注意：** func 返回的数据第一位必须是行号或坐标。
 
-## MapGun 类
+## 范围填充器：MapGun 类
 
 MapGun 类用于对一个区域一次写入一整片二维数据。支持 xlsx 和 csv 格式。
 
