@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
+from time import sleep
 from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
@@ -124,6 +125,9 @@ class Filler(BaseRecorder):
         :param coord: 要添加数据的坐标，仅用于添加一行数据
         :return: None
         """
+        while self._pause_add:
+            sleep(.1)
+
         if not isinstance(data, (list, tuple, dict)):
             raise TypeError(f'只能接受list、tuple和dict格式数据，不能是{type(data)}')
 

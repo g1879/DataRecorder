@@ -2,6 +2,7 @@
 from abc import abstractmethod
 from pathlib import Path
 from re import sub
+from threading import Lock
 from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
@@ -26,6 +27,9 @@ class BaseRecorder(object):
         self._after = []
         self._type = None
         self._path = None
+        self._lock = Lock()
+        self._pause_add = False  # 文件写入时暂停接收输入
+
         if path:
             self.set_path(path)
         self.cache_size = cache_size if cache_size is not None else 1000
@@ -154,25 +158,29 @@ class BaseRecorder(object):
         if not self._path:
             raise ValueError('保存路径为空。')
 
-        while True:
-            try:
-                self._record()
-                break
+        with self._lock:
+            self._pause_add = True  # 写入文件前暂缓接收数据
+            while True:
+                try:
+                    self._record()
+                    break
 
-            except PermissionError:
-                print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                except PermissionError:
+                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
-            except Exception as e:
-                if self._data:
-                    print(f'\n{self._data}\n\n注意！！以上数据未保存')
-                if 'Python is likely shutting down' not in str(e):
-                    raise
-                break
+                except Exception as e:
+                    if self._data:
+                        print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                    if 'Python is likely shutting down' not in str(e):
+                        raise
+                    break
 
-        if new_path:
-            self._path = original_path
+            if new_path:
+                self._path = original_path
 
-        self._data = []
+            self._data = []
+            self._pause_add = False
+
         return return_path
 
     def set_head(self, head: Union[list, tuple]) -> None:

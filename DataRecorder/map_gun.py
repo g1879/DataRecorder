@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
+from time import sleep
 from typing import Union
 
 from openpyxl import load_workbook, Workbook
@@ -55,6 +56,9 @@ class MapGun(BaseRecorder):
         :param coord: 左上角坐标
         :return: None
         """
+        while self._pause_add:
+            sleep(.1)
+
         if not isinstance(data, (list, tuple)):
             raise TypeError(f'只能接受list和tuple格式数据，不能是{type(data)}')
         if coord is not None:

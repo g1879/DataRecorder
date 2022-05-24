@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
+from time import sleep
 from typing import Union, Any
 
 from openpyxl import Workbook, load_workbook
@@ -18,6 +19,9 @@ class Recorder(BaseRecorder):
         :param data: 插入的数据，元组或列表
         :return: None
         """
+        while self._pause_add:
+            sleep(.1)
+
         if not isinstance(data, (list, tuple, dict)):
             data = (data,)
         if data and (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) \
