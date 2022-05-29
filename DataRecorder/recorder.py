@@ -35,8 +35,6 @@ class Recorder(BaseRecorder):
 
     def _record(self) -> None:
         """记录数据"""
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-
         if self.type == 'xlsx':
             self._to_xlsx()
         elif self.type == 'csv':

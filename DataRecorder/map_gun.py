@@ -12,7 +12,8 @@ from .base import BaseRecorder, _parse_coord, _process_content
 class MapGun(BaseRecorder):
     """把二维数据填充到以左上角坐标为起点的范围"""
 
-    def __init__(self, path: Union[str, Path] = None,
+    def __init__(self,
+                 path: Union[str, Path] = None,
                  coord: Union[str, tuple, list] = None,
                  float_coord: bool = True):
         """初始化                                              \n
@@ -21,8 +22,8 @@ class MapGun(BaseRecorder):
         :param float_coord: 保存数据后坐标是否移动到底部
         """
         super().__init__(path, 1)
-        self.coord = coord or [1, 1]
-        self.float_coord = float_coord
+        self.coord: list = coord or [1, 1]
+        self.float_coord: bool = float_coord
 
     @property
     def coord(self) -> list:
@@ -63,6 +64,7 @@ class MapGun(BaseRecorder):
             raise TypeError(f'只能接受list和tuple格式数据，不能是{type(data)}')
         if coord is not None:
             self.coord = coord
+
         self._data = data
         self.record()
 

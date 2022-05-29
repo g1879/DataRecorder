@@ -36,7 +36,7 @@ class Filler(BaseRecorder):
         self.begin_row = begin_row
         self.sign_col = sign_col
         self.sign = sign
-        self.data_col = data_col or sign_col
+        self.data_col = data_col or self.sign_col
 
     @property
     def key_cols(self) -> Union[list, tuple]:

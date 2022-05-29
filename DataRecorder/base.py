@@ -13,29 +13,25 @@ from openpyxl.utils.cell import coordinate_from_string
 from .tools import get_usable_path
 
 
-class BaseRecorder(object):
-    """记录器的父类"""
-    SUPPORTS = ('xlsx', 'csv')
+class OriginalRecorder(object):
+    SUPPORTS = ('any',)
 
-    def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
+    def __init__(self,
+                 path: Union[str, Path] = None,
+                 cache_size: int = None) -> None:
         """初始化                                            \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
         self._data = []
-        self._before = []
-        self._after = []
-        self._type = None
         self._path = None
+        self._type = None
         self._lock = Lock()
         self._pause_add = False  # 文件写入时暂停接收输入
 
         if path:
             self.set_path(path)
         self.cache_size = cache_size if cache_size is not None else 1000
-        self.encoding: str = 'utf-8'
-        self.delimiter: str = ','  # csv文件分隔符
-        self.quote_char: str = '"'  # csv文件引用符
 
     def __del__(self) -> None:
         """对象关闭时把剩下的数据写入文件"""
@@ -71,16 +67,6 @@ class BaseRecorder(object):
         """返回当前保存在缓存的数据"""
         return self._data
 
-    @property
-    def before(self) -> Any:
-        """返回当前before内容"""
-        return self._before
-
-    @property
-    def after(self) -> Any:
-        """返回当前after内容"""
-        return self._after
-
     def set_path(self, path: Union[str, Path]) -> None:
         """设置文件路径                \n
         :param path: 文件路径
@@ -100,6 +86,93 @@ class BaseRecorder(object):
             self.record()  # 更换文件前自动记录剩余数据
 
         self._path = str(path) if isinstance(path, Path) else path
+
+    def record(self, new_path: Union[str, Path] = None) -> str:
+        """记录数据，可保存到新文件                                \n
+        :param new_path: 文件另存为的路径，会保存新文件
+        :return: 返回记录文件的路径
+        """
+        # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
+        original_path = return_path = self._path
+        if new_path:
+            new_path = str(get_usable_path(new_path))
+            return_path = self._path = new_path
+
+            if Path(original_path).exists():
+                from shutil import copy
+                copy(original_path, self._path)
+
+        if not self._data:
+            return return_path
+
+        if not self._path:
+            raise ValueError('保存路径为空。')
+
+        with self._lock:
+            self._pause_add = True  # 写入文件前暂缓接收数据
+            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+            while True:
+                try:
+                    self._record()
+                    break
+
+                except PermissionError:
+                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+
+                except Exception as e:
+                    if self._data:
+                        print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                    if 'Python is likely shutting down' not in str(e):
+                        raise
+                    break
+
+            if new_path:
+                self._path = original_path
+
+            self._data = []
+            self._pause_add = False
+
+        return return_path
+
+    def clear(self) -> None:
+        """清空缓存中的数据"""
+        self._data = []
+
+    @abstractmethod
+    def add_data(self, data):
+        pass
+
+    @abstractmethod
+    def _record(self):
+        pass
+
+
+class BaseRecorder(OriginalRecorder):
+    """记录器的父类"""
+    SUPPORTS = ('xlsx', 'csv')
+
+    def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
+        """初始化                                            \n
+        :param path: 保存的文件路径
+        :param cache_size: 每接收多少条记录写入文件，0为不自动写入
+        """
+        super().__init__(path, cache_size)
+        self._before = []
+        self._after = []
+
+        self.encoding: str = 'utf-8'
+        self.delimiter: str = ','  # csv文件分隔符
+        self.quote_char: str = '"'  # csv文件引用符
+
+    @property
+    def before(self) -> Any:
+        """返回当前before内容"""
+        return self._before
+
+    @property
+    def after(self) -> Any:
+        """返回当前after内容"""
+        return self._after
 
     def set_before(self, before: Any) -> None:
         """设置在数据前面补充的列                              \n
@@ -132,56 +205,6 @@ class BaseRecorder(object):
             self._after = list(after)
         else:
             self._after = [after]
-
-    def clear(self) -> None:
-        """清空缓存中的数据"""
-        self._data = []
-
-    def record(self, new_path: Union[str, Path] = None) -> str:
-        """记录数据，可保存到新文件                                \n
-        :param new_path: 文件另存为的路径，会保存新文件
-        :return: 返回记录文件的路径
-        """
-        # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
-        original_path = return_path = self._path
-        if new_path:
-            new_path = str(get_usable_path(new_path))
-            return_path = self._path = new_path
-
-            if Path(original_path).exists():
-                from shutil import copy
-                copy(original_path, self._path)
-
-        if not self._data:
-            return return_path
-
-        if not self._path:
-            raise ValueError('保存路径为空。')
-
-        with self._lock:
-            self._pause_add = True  # 写入文件前暂缓接收数据
-            while True:
-                try:
-                    self._record()
-                    break
-
-                except PermissionError:
-                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
-
-                except Exception as e:
-                    if self._data:
-                        print(f'\n{self._data}\n\n注意！！以上数据未保存')
-                    if 'Python is likely shutting down' not in str(e):
-                        raise
-                    break
-
-            if new_path:
-                self._path = original_path
-
-            self._data = []
-            self._pause_add = False
-
-        return return_path
 
     def set_head(self, head: Union[list, tuple]) -> None:
         """设置表头。只有 csv 和 xlsx 格式支持设置表头       \n
