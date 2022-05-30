@@ -39,7 +39,7 @@ class Filler(BaseRecorder):
         self.data_col = data_col or self.sign_col
 
     @property
-    def key_cols(self) -> Union[list, tuple]:
+    def key_cols(self) -> List[int]:
         """返回作为关键字的列或列的集合"""
         return self._key_cols
 
@@ -49,7 +49,50 @@ class Filler(BaseRecorder):
         :param cols: 列号或列名，或它们组成的list或tuple
         :return: None
         """
-        self._key_cols = (cols,) if isinstance(cols, (int, str)) else cols
+        if isinstance(cols, int) and cols > 0:
+            self._key_cols = [cols]
+        elif isinstance(cols, str):
+            self._key_cols = [column_index_from_string(cols)]
+        elif isinstance(cols, (list, tuple)):
+            self._key_cols = [i if isinstance(i, int) and i > 0 else column_index_from_string(i) for i in cols]
+        else:
+            raise TypeError('col值只能是int或str，且必须大于0。')
+
+    @property
+    def sign_col(self) -> int:
+        """返回用于判断是否已填数据的列"""
+        return self._sign_col
+
+    @sign_col.setter
+    def sign_col(self, col: Union[str, int]) -> None:
+        """设置用于判断是否已填数据的列       \n
+        :param col: 列号或列名
+        :return: None
+        """
+        if isinstance(col, int) and col > 0:
+            self._sign_col = col
+        elif isinstance(col, str):
+            self._sign_col = column_index_from_string(col)
+        else:
+            raise TypeError('col值只能是int或str，且必须大于0。')
+
+    @property
+    def data_col(self) -> int:
+        """返回用于填充数据的列"""
+        return self._data_col
+
+    @data_col.setter
+    def data_col(self, col: Union[str, int]) -> None:
+        """设置用于填充数据的列       \n
+        :param col: 列号或列名
+        :return: None
+        """
+        if isinstance(col, int) and col > 0:
+            self._data_col = col
+        elif isinstance(col, str):
+            self._data_col = column_index_from_string(col)
+        else:
+            raise TypeError('col值只能是int或str，且必须大于0。')
 
     @property
     def begin_row(self) -> Union[str, int]:
@@ -58,28 +101,13 @@ class Filler(BaseRecorder):
 
     @begin_row.setter
     def begin_row(self, row: int) -> None:
-        """设置数据开始的行
+        """设置数据开始的行       \n
         :param row: 行号
         :return: None
         """
         if not isinstance(row, int) or row < 1:
             raise TypeError('row值只能是int，且必须大于0')
         self._begin_row = row
-
-    @property
-    def sign_col(self) -> Union[str, int]:
-        """返回用于判断是否已填数据的列"""
-        return self._sign_col
-
-    @sign_col.setter
-    def sign_col(self, col: Union[str, int]) -> None:
-        """设置用于判断是否已填数据的列
-        :param col: 列号或列名
-        :return: None
-        """
-        if not isinstance(col, (int, str)):
-            raise TypeError('col值只能是int或str')
-        self._sign_col = col
 
     @property
     def keys(self) -> list:
@@ -201,17 +229,16 @@ class Filler(BaseRecorder):
         """填写数据到xlsx文件"""
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
-        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
 
         for i in self._data:
             if i[0] == 'set_link':
-                row, col1 = _parse_coord(i[1], col)
+                row, col1 = _parse_coord(i[1], self.data_col)
                 cell = ws.cell(row, col1)
                 cell.hyperlink = _process_content(i[2], True)
                 if i[3] is not None:
                     cell.value = _process_content(i[3], True)
             else:
-                row, col1 = _parse_coord(i[0], col, (list, tuple))
+                row, col1 = _parse_coord(i[0], self.data_col, (list, tuple))
                 for key, j in enumerate(self._data_to_list(i[1:])):
                     ws.cell(row, col1 + key).value = _process_content(j, True)
 
@@ -220,8 +247,6 @@ class Filler(BaseRecorder):
 
     def _to_csv(self) -> None:
         """填写数据到xlsx文件"""
-        col = self.data_col if isinstance(self.data_col, int) else column_index_from_string(self.data_col)
-
         if not Path(self.path).exists():
             with open(self.path, 'w', encoding=self.encoding):
                 pass
@@ -235,10 +260,10 @@ class Filler(BaseRecorder):
                 if i[0] == 'set_link':
                     txt = i[3] or i[2]
                     now_data = f'=HYPERLINK("{i[2]}","{txt}")'
-                    row, col1 = _parse_coord(i[1], col)
+                    row, col1 = _parse_coord(i[1], self.data_col)
                 else:
                     now_data = self._data_to_list(i[1:])
-                    row, col1 = _parse_coord(i[0], col, (list, tuple))
+                    row, col1 = _parse_coord(i[0], self.data_col, (list, tuple))
 
                 # 若行数不够，填充行数
                 for _ in range(row - lines_len):
@@ -272,9 +297,6 @@ def _get_xlsx_keys(path: str,
     :param key_cols: 关键字所在列，可以是多列
     :return: 关键字组成的列表
     """
-    key_cols = [i if isinstance(i, int) else column_index_from_string(i) for i in key_cols]
-    sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
-
     wb = load_workbook(path, data_only=True, read_only=True)
     ws = wb.active
 
@@ -315,8 +337,6 @@ def _get_csv_keys(path: str,
     :param quotechar: 引用符
     :return: 关键字组成的列表
     """
-    key_cols = [i - 1 if isinstance(i, int) else column_index_from_string(i) - 1 for i in key_cols]
-    sign_col = column_index_from_string(sign_col) if isinstance(sign_col, str) else sign_col
     sign = '' if sign is None else str(sign)
     sign_col -= 1
     begin_row -= 1
