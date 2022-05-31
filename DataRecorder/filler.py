@@ -306,10 +306,10 @@ def _get_xlsx_keys(path: str,
         ws = wb.active
 
     if sign_col > ws.max_column:
-        res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
+        res_keys = [[ind] + [row[i - 1].value for i in key_cols]
                     for ind, row in enumerate(ws.rows, 1) if ind >= begin_row]
     else:
-        res_keys = [[ind] + [i.value for k, i in enumerate(row, 1) if k in key_cols]
+        res_keys = [[ind] + [row[i - 1].value for i in key_cols]
                     for ind, row in enumerate(ws.rows, 1)
                     if ind >= begin_row and row[sign_col - 1].value == sign]
 
@@ -346,10 +346,10 @@ def _get_csv_keys(path: str,
         reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)[begin_row:]
 
-        for k, line in enumerate(lines):
+        for ind, line in enumerate(lines, begin_row):
             row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
             if row_sign == sign:
-                key = [k + 1]
-                res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
+                res_keys.append([ind] + [line[i - 1] for i in key_cols])
+                # res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
 
     return res_keys
