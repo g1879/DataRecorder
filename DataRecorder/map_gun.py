@@ -36,7 +36,7 @@ class MapGun(BaseRecorder):
         :param coord: 接受几种形式：'A3', '3,1', (3, 1), [3, 1]，除第一种外都是行在前
         :return: None
         """
-        self._coord = list(_parse_coord(coord, None, int))
+        self._coord = list(_parse_coord(coord, None))
 
     @property
     def cache_size(self) -> int:

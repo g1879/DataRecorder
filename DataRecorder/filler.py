@@ -2,7 +2,7 @@
 from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from time import sleep
-from typing import Union, List
+from typing import Union, List, Any, Tuple
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
@@ -145,50 +145,37 @@ class Filler(BaseRecorder):
         self.data_col = data_col or self.data_col
 
     def add_data(self,
-                 data: Union[list, tuple, dict],
-                 coord: Union[list, tuple, str, int] = None) -> None:
-        """添加数据                                                                   \n
-        数据格式：第一位为行号或坐标（int或str），第二位开始为数据，数据可以是list, tuple, dict
-        :param data: 要添加的内容，第一位为行号，其余为要添加的内容
-        :param coord: 要添加数据的坐标，仅用于添加一行数据
+                 data: Any,
+                 coord: Union[list, Tuple[int, int], str, int] = 'newline') -> None:
+        """添加数据，每次添加一行数据                                                            \n
+        coord只输入数字（行号）时，列号为self.data_col值，如 3；
+        输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
+        输入 'newline' 时，表示新增一行，列号为self.data_col值；
+        输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]                                  \n
+        :param data: 要添加的内容，任意格式都可以
+        :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'。
         :return: None
         """
         while self._pause_add:
             sleep(.1)
 
-        if not isinstance(data, (list, tuple, dict)):
-            raise TypeError(f'只能接受list、tuple和dict格式数据，不能是{type(data)}')
-
-        if coord is not None:
+        if coord != 'set_link':
             coord = _parse_coord(coord, self.data_col)
-            coord = f'{coord[0]},{coord[1]}'
-            data = (coord, data)
 
-        if isinstance(data, dict) or isinstance(data[0], (int, str)):  # 只有一个数据的情况
-            data = (data,)
+        new_data = [coord]
+        if isinstance(data, dict):
+            new_data.extend(list(data.values()))
 
-        new_data = []
-        for item in data:
-            if isinstance(item, dict):
-                item = list(item.values())
+        elif isinstance(data, tuple):
+            new_data.extend(list(data))
 
-            length = len(item)
-            if not ((isinstance(item, (list, tuple, dict)) and length >= 2) or not isinstance(item[0], (int, str))):
-                raise ValueError('数据项必须为长度不少于2的list、tuple或dict，且第一位为int(行号)、str(eg."B3"或"3,2")。')
+        elif isinstance(data, list):
+            new_data.extend(data)
 
-            if length == 2 and isinstance(item[1], (list, tuple, dict)):  # 只有两位且第二位是数据集
-                if isinstance(item[1], dict):
-                    val = list(item[1].values())
-                elif isinstance(item[1], tuple):
-                    val = list(item[1])
-                else:
-                    val = item[1]
-                item = [item[0]]
-                item.extend(val)
+        else:
+            new_data.append(data)
 
-            new_data.append(item)
-
-        self._data.extend(new_data)
+        self._data.append(new_data)
 
         if 0 < self.cache_size <= len(self._data):
             self.record()
@@ -203,7 +190,7 @@ class Filler(BaseRecorder):
         :param content: 单元格内容
         :return: None
         """
-        self.add_data(('set_link', coord, link, content))
+        self.add_data((coord, link, content), 'set_link')
 
     def _record(self) -> None:
         """记录数据"""
@@ -213,16 +200,15 @@ class Filler(BaseRecorder):
             self._to_csv()
 
     def fill(self, func, *args) -> None:
-        """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充  \n
-        方法第一个参数必须是keys，用于接收关键字列，返回的第一位必须是行号或坐标                 \n
+        """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充。
+        方法第一个参数必须是接收keys（第一位是行号），并返回该行处理后的数据                      \n
         :param func: 用于获取数据的方法，返回要填充的数据
         :param args: 该方法的参数
         :return: None
         """
         for i in self.keys:
             print(i)
-            res = [i[0], func(i, *args)]
-            self.add_data(res)
+            self.add_data(func(i, *args), i[0])
         self.record()
 
     def _to_xlsx(self) -> None:
@@ -237,8 +223,14 @@ class Filler(BaseRecorder):
                 cell.hyperlink = _process_content(i[2], True)
                 if i[3] is not None:
                     cell.value = _process_content(i[3], True)
+
+            elif i[0][0] is None:  # 新行
+                new_row = [None] * (i[0][1] - 1)
+                new_row.extend(i[1:])
+                ws.append(new_row)
+
             else:
-                row, col1 = _parse_coord(i[0], self.data_col, (list, tuple))
+                row, col1 = i[0]
                 for key, j in enumerate(self._data_to_list(i[1:])):
                     ws.cell(row, col1 + key).value = _process_content(j, True)
 
@@ -254,28 +246,30 @@ class Filler(BaseRecorder):
         with open(self.path, 'r', encoding=self.encoding) as f:
             reader = csv_reader(f, delimiter=self.delimiter, quotechar=self.quote_char)
             lines = list(reader)
-            lines_len = len(lines)
+            lines_count = len(lines)
 
             for i in self._data:
                 if i[0] == 'set_link':
-                    txt = i[3] or i[2]
-                    now_data = f'=HYPERLINK("{i[2]}","{txt}")'
                     row, col1 = _parse_coord(i[1], self.data_col)
+                    now_data = (f'=HYPERLINK("{i[2]}","{i[3] or i[2]}")',)
+
+                elif i[0][0] is None:  # 新行
+                    now_data = i[1:]
+                    row, col1 = lines_count + 1, i[0][1]
+
                 else:
                     now_data = self._data_to_list(i[1:])
-                    row, col1 = _parse_coord(i[0], self.data_col, (list, tuple))
+                    row, col1 = i[0]
 
-                # 若行数不够，填充行数
-                for _ in range(row - lines_len):
+                for _ in range(row - lines_count):  # 若行数不够，填充行数
                     lines.append([])
-                    lines_len += 1
+                    lines_count += 1
 
                 row_num = row - 1
                 # 若列数不够，填充空列
                 lines[row_num].extend([None] * (col1 - len(lines[row_num]) + len(now_data) - 1))
 
-                # 填充数据
-                for k, j in enumerate(now_data):
+                for k, j in enumerate(now_data):  # 填充数据
                     lines[row_num][col1 + k - 1] = _process_content(j)
 
             writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''), delimiter=self.delimiter,
@@ -346,10 +340,9 @@ def _get_csv_keys(path: str,
         reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)[begin_row:]
 
-        for ind, line in enumerate(lines, begin_row):
+        for ind, line in enumerate(lines, begin_row + 1):
             row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
             if row_sign == sign:
                 res_keys.append([ind] + [line[i - 1] for i in key_cols])
-                # res_keys.append(key + [i for num, i in enumerate(line) if num in key_cols])
 
     return res_keys

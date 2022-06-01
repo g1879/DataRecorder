@@ -299,35 +299,67 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
     wb.close()
 
 
-def _parse_coord(coord: Union[int, str, list, tuple],
-                 col: int = None,
-                 disable_type: Union[type, list, tuple] = None) -> Tuple[int, int]:
-    """解析坐标，返回坐标tuple                                              \n
-    :param coord: 坐标
-    :param col: 列号，用于只传入行号的情况
-    :param disable_type: 禁用的格式，可以传入单个格式或格式组成的list或tuple
-    :return: 坐标tuple（行, 列）
+def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
+                 data_col: int = None) -> Tuple[Union[int, None], int]:
+    """解析坐标，返回坐标tuple                                                             \n
+    coord只输入数字（行号）时，列号为self.data_col值，如 3；
+    输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
+    输入 'newline' 时，表示新增一行，列号为self.data_col值；
+    输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]                                  \n
+    :param coord: 坐标、列号、行号
+    :param data_col: 列号，用于只传入行号的情况
+    :return: 坐标tuple：(行, 列)，或(None, 列)
     """
-    if disable_type and isinstance(coord, disable_type):
-        raise TypeError(f'当前坐标类型不允许为{disable_type}')
+    if coord == 'newline':  # 新增一行，列为data_col
+        return None, data_col
 
     if isinstance(coord, (int, float)):
-        if col:
-            return int(coord), col
-        else:
-            raise ValueError('只输入行号时必须同时输入列号')
+        return int(coord), data_col
 
     if isinstance(coord, str):
+        coord = coord.replace(' ', '')
+
+        if coord.isalpha():  # 只输入列号，要新建一行
+            return None, column_index_from_string(coord)
+
         if ',' in coord:  # '3,1'形式
-            coord = coord.replace(' ', '').split(',')
+            x, y = coord.split(',')
+            if x.lower() in ('', 'new', 'none', 'newline'):
+                x = None
+            elif x.isdigit():
+                x = int(x)
+            else:
+                raise ValueError('行格式不正确。')
+
+            if y.isdigit():
+                y = int(y)
+            elif y.isalpha():
+                y = column_index_from_string(y)
+            else:
+                raise TypeError('列格式不正确。')
+
+            return x, y
+
         else:  # 'A3'形式
             xy = coordinate_from_string(coord)
             return xy[1], column_index_from_string(xy[0])
 
-    if isinstance(coord, (tuple, list)) and len(coord) == 2:
-        return int(coord[0]), int(coord[1])
-    else:
-        raise ValueError('list或tuple时长度必须为2')
+    if isinstance(coord, (tuple, list)):
+        if len(coord) != 2:
+            raise ValueError('coord为list或tuple时长度必须为2。')
+
+        x = None
+        if coord[0] not in (None, 'new', 'newline'):
+            x = int(coord[0])
+
+        if isinstance(coord[1], int):
+            y = coord[1]
+        elif isinstance(coord[1], str):
+            y = column_index_from_string(coord[1])
+        else:
+            raise TypeError('列格式不正确。')
+
+        return x, y
 
 
 def _process_content(content: Any, excel: bool = False) -> Union[int, str, float, None]:
