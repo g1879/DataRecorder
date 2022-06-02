@@ -2,7 +2,7 @@
 from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from time import sleep
-from typing import Union
+from typing import Union, Tuple
 
 from openpyxl import load_workbook, Workbook
 
@@ -51,7 +51,8 @@ class MapGun(BaseRecorder):
         """
         pass
 
-    def add_data(self, data: Union[list, tuple], coord: Union[str, tuple, list] = None) -> None:
+    def add_data(self, data: Union[list, tuple],
+                 coord: Union[list, Tuple[Union[None, int], int], str, int] = 'newline') -> None:
         """接收二维数据，若是一维的，每个元素作为一行看待    \n
         :param data: 二维数据
         :param coord: 左上角坐标
@@ -84,14 +85,28 @@ class MapGun(BaseRecorder):
         ws = wb.active
 
         row, col = self.coord
-        for i in self._data:
-            if not isinstance(i, (list, tuple)):
-                i = (i,)
+        if col < 0:
+            col = ws.max_column + col + 1
+            if col < 1:
+                raise ValueError(f'列号不能小于1。当前：{col}')
 
-            for ind, j in enumerate(self._data_to_list(i)):
-                ws.cell(row, col + ind).value = _process_content(j, True)
+        if row is None:
+            for i in self._data:
+                if not isinstance(i, (list, tuple)):
+                    i = (i,)
+                new_row = [None] * (col - 1)
+                new_row.extend([_process_content(j, True) for j in self._data_to_list(i)])
+                ws.append(new_row)
 
-            row += 1
+        else:
+            for i in self._data:
+                if not isinstance(i, (list, tuple)):
+                    i = (i,)
+
+                for ind, j in enumerate(self._data_to_list(i)):
+                    ws.cell(row, col + ind).value = _process_content(j, True)
+
+                row += 1
 
         wb.save(self.path)
         wb.close()

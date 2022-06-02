@@ -96,7 +96,7 @@ class Filler(BaseRecorder):
 
     @property
     def begin_row(self) -> Union[str, int]:
-        """返回数据开始的行号，从1开始"""
+        """返回数据开始的行号，用于获取keys，从1开始"""
         return self._begin_row
 
     @begin_row.setter
@@ -144,14 +144,14 @@ class Filler(BaseRecorder):
         self.sign = sign or self.sign
         self.data_col = data_col or self.data_col
 
-    def add_data(self,
-                 data: Any,
-                 coord: Union[list, Tuple[int, int], str, int] = 'newline') -> None:
-        """添加数据，每次添加一行数据                                                            \n
+    def add_data(self, data: Any,
+                 coord: Union[list, Tuple[Union[None, int], int], str, int] = 'newline') -> None:
+        """添加数据，每次添加一行数据，可指定坐标、列号或行号                                           \n
         coord只输入数字（行号）时，列号为self.data_col值，如 3；
         输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
         输入 'newline' 时，表示新增一行，列号为self.data_col值；
-        输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]                                  \n
+        输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]；
+        输入的行号列号可以是负数，代表从下往上数，-1是倒数第一行，如'a-3'、(-3, -3)                                            \n
         :param data: 要添加的内容，任意格式都可以
         :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'。
         :return: None
@@ -190,6 +190,10 @@ class Filler(BaseRecorder):
         :param content: 单元格内容
         :return: None
         """
+        if not isinstance(link, str):
+            raise TypeError(f'link参数只能是str，不能是{type(link)}')
+        if not isinstance(content, (int, str, float, type(None))):
+            raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}')
         self.add_data((coord, link, content), 'set_link')
 
     def _record(self) -> None:
@@ -215,24 +219,36 @@ class Filler(BaseRecorder):
         """填写数据到xlsx文件"""
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
+        max_column = ws.max_column
 
         for i in self._data:
             if i[0] == 'set_link':
-                row, col1 = _parse_coord(i[1], self.data_col)
-                cell = ws.cell(row, col1)
+                row, col = _parse_coord(i[1], self.data_col)
+                cell = ws.cell(row, col)
                 cell.hyperlink = _process_content(i[2], True)
                 if i[3] is not None:
                     cell.value = _process_content(i[3], True)
+                continue
 
-            elif i[0][0] is None:  # 新行
-                new_row = [None] * (i[0][1] - 1)
-                new_row.extend(i[1:])
+            row, col = i[0]
+            if col < 0:
+                col = max_column + col + 1
+                if col < 1:
+                    raise ValueError(f'列号不能小于1。当前：{col}')
+
+            if row is None:  # 新行
+                new_row = [None] * (col - 1)
+                new_row.extend([_process_content(j, True) for j in self._data_to_list(i[1:])])
                 ws.append(new_row)
 
             else:
-                row, col1 = i[0]
+                if row < 0:
+                    row = ws.max_row + row + 1
+                    if row < 1:
+                        raise ValueError(f'行号不能小于1。当前：{row}')
+
                 for key, j in enumerate(self._data_to_list(i[1:])):
-                    ws.cell(row, col1 + key).value = _process_content(j, True)
+                    ws.cell(row, col + key).value = _process_content(j, True)
 
         wb.save(self.path)
         wb.close()
@@ -254,23 +270,33 @@ class Filler(BaseRecorder):
                     now_data = (f'=HYPERLINK("{i[2]}","{i[3] or i[2]}")',)
 
                 elif i[0][0] is None:  # 新行
-                    now_data = i[1:]
-                    row, col1 = lines_count + 1, i[0][1]
+                    now_data = self._data_to_list(i[1:])
+                    row, col = lines_count + 1, i[0][1]
 
                 else:
                     now_data = self._data_to_list(i[1:])
-                    row, col1 = i[0]
+                    row, col = i[0]
+                    if row < 0:
+                        row = lines_count + row + 1
+                        if row < 1:
+                            raise ValueError(f'行号不能小于1。当前：{row}')
 
                 for _ in range(row - lines_count):  # 若行数不够，填充行数
                     lines.append([])
                     lines_count += 1
 
                 row_num = row - 1
+                line_len = len(lines[row_num])
+                if col < 0:
+                    col = line_len + col + 1
+                    if col < 1:
+                        raise ValueError(f'列号不能小于1。当前：{col}')
+
                 # 若列数不够，填充空列
-                lines[row_num].extend([None] * (col1 - len(lines[row_num]) + len(now_data) - 1))
+                lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
 
                 for k, j in enumerate(now_data):  # 填充数据
-                    lines[row_num][col1 + k - 1] = _process_content(j)
+                    lines[row_num][col + k - 1] = _process_content(j)
 
             writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''), delimiter=self.delimiter,
                                 quotechar=self.quote_char)

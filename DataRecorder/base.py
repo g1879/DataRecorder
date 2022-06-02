@@ -1,14 +1,13 @@
 # -*- coding:utf-8 -*-
 from abc import abstractmethod
 from pathlib import Path
-from re import sub
+from re import sub, match
 from threading import Lock
 from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell, ReadOnlyCell
 from openpyxl.utils import column_index_from_string
-from openpyxl.utils.cell import coordinate_from_string
 
 from .tools import get_usable_path
 
@@ -301,28 +300,30 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
 
 def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
                  data_col: int = None) -> Tuple[Union[int, None], int]:
-    """解析坐标，返回坐标tuple                                                             \n
+    """添加数据，每次添加一行数据，可指定坐标、列号或行号                                           \n
     coord只输入数字（行号）时，列号为self.data_col值，如 3；
     输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
     输入 'newline' 时，表示新增一行，列号为self.data_col值；
-    输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]                                  \n
+    输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]；
+    输入的行号可以是负数（列号不可以），代表从下往上数，-1是倒数第一行，如'a-3'、(-3, 3)                                            \n
     :param coord: 坐标、列号、行号
     :param data_col: 列号，用于只传入行号的情况
     :return: 坐标tuple：(行, 列)，或(None, 列)
     """
+    return_coord = None
     if coord == 'newline':  # 新增一行，列为data_col
-        return None, data_col
+        return_coord = None, data_col
 
-    if isinstance(coord, (int, float)):
-        return int(coord), data_col
+    elif isinstance(coord, (int, float)) and coord != 0:
+        return_coord = int(coord), data_col
 
-    if isinstance(coord, str):
+    elif isinstance(coord, str):
         coord = coord.replace(' ', '')
 
         if coord.isalpha():  # 只输入列号，要新建一行
-            return None, column_index_from_string(coord)
+            return_coord = None, column_index_from_string(coord)
 
-        if ',' in coord:  # '3,1'形式
+        elif ',' in coord:  # '3,1'形式
             x, y = coord.split(',')
             if x.lower() in ('', 'new', 'none', 'newline'):
                 x = None
@@ -338,13 +339,16 @@ def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
             else:
                 raise TypeError('列格式不正确。')
 
-            return x, y
+            return_coord = x, y
 
         else:  # 'A3'形式
-            xy = coordinate_from_string(coord)
-            return xy[1], column_index_from_string(xy[0])
+            m = match(r'^[$]?([A-Za-z]{1,3})[$]?(-?\d+)$', coord)
+            if not m:
+                raise ValueError('坐标格式不正确。')
+            y, x = m.groups()
+            return_coord = int(x), column_index_from_string(y)
 
-    if isinstance(coord, (tuple, list)):
+    elif isinstance(coord, (tuple, list)):
         if len(coord) != 2:
             raise ValueError('coord为list或tuple时长度必须为2。')
 
@@ -359,11 +363,15 @@ def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
         else:
             raise TypeError('列格式不正确。')
 
-        return x, y
+        return_coord = x, y
+
+    if not return_coord or return_coord[0] == 0 or return_coord[1] == 0:
+        raise ValueError(f'坐标{return_coord}格式不正确。')
+    return return_coord
 
 
 def _process_content(content: Any, excel: bool = False) -> Union[int, str, float, None]:
-    """处理要写入的数据                  \n
+    """处理单个单元格要写入的数据                  \n
     :param content: 未处理的数据内容
     :return: 处理后的数据
     """
