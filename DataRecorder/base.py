@@ -399,3 +399,26 @@ def _ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = F
     if as_str:
         data_list = [str(i) for i in data_list]
     return [_process_content(i, excel) for i in data_list]
+
+
+def _get_usable_coord(coord: Union[tuple, list], max_row: int, max_col: int) -> Tuple[int, int]:
+    """返回真正写入文件的坐标                                              \n
+    :param coord: 已初步格式化的坐标，如(1, 2)、(None, 3)、(-3, -2)
+    :param max_row: 文件最大行
+    :param max_col: 文件最大列
+    :return: 真正写入文件的坐标
+    """
+    row, col = coord
+    if col < 0:
+        col = max_col + col + 1
+        if col < 1:
+            raise ValueError(f'列号不能小于1。当前：{col}')
+
+    if row is None:
+        row = max_row + 1
+    elif row < 0:
+        row = max_row + row + 1
+        if row < 1:
+            raise ValueError(f'行号不能小于1。当前：{row}')
+
+    return row, col

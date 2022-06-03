@@ -6,7 +6,7 @@ from typing import Union, Tuple
 
 from openpyxl import load_workbook, Workbook
 
-from .base import BaseRecorder, _parse_coord, _process_content
+from .base import BaseRecorder, _parse_coord, _process_content, _get_usable_coord
 
 
 class MapGun(BaseRecorder):
@@ -22,7 +22,9 @@ class MapGun(BaseRecorder):
         :param float_coord: 保存数据后坐标是否移动到底部
         """
         super().__init__(path, 1)
-        self.coord: list = coord or [1, 1]
+        self._coord = [1, 1]
+        if coord:
+            self.coord: list = coord
         self.float_coord: bool = float_coord
 
     @property
@@ -36,7 +38,7 @@ class MapGun(BaseRecorder):
         :param coord: 接受几种形式：'A3', '3,1', (3, 1), [3, 1]，除第一种外都是行在前
         :return: None
         """
-        self._coord = list(_parse_coord(coord, None))
+        self._coord = list(_parse_coord(coord, self._coord[1]))
 
     @property
     def cache_size(self) -> int:
@@ -52,8 +54,8 @@ class MapGun(BaseRecorder):
         pass
 
     def add_data(self, data: Union[list, tuple],
-                 coord: Union[list, Tuple[Union[None, int], int], str, int] = 'newline') -> None:
-        """接收二维数据，若是一维的，每个元素作为一行看待    \n
+                 coord: Union[list, Tuple[Union[None, int], int], str, int] = None) -> None:
+        """接收二维数据，若是一维的，每个元素作为一行看待，每次添加都会即时记录到文件    \n
         :param data: 二维数据
         :param coord: 左上角坐标
         :return: None
@@ -76,7 +78,7 @@ class MapGun(BaseRecorder):
         elif self.type == 'csv':
             self._to_csv()
 
-        if self.float_coord:
+        if self.float_coord and self.coord[0]:
             self.coord[0] += len(self._data)
 
     def _to_xlsx(self) -> None:
@@ -84,29 +86,14 @@ class MapGun(BaseRecorder):
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
 
-        row, col = self.coord
-        if col < 0:
-            col = ws.max_column + col + 1
-            if col < 1:
-                raise ValueError(f'列号不能小于1。当前：{col}')
+        row, col = _get_usable_coord(self.coord, ws.max_row, ws.max_column)
 
-        if row is None:
-            for i in self._data:
-                if not isinstance(i, (list, tuple)):
-                    i = (i,)
-                new_row = [None] * (col - 1)
-                new_row.extend([_process_content(j, True) for j in self._data_to_list(i)])
-                ws.append(new_row)
+        for row, i in enumerate(self._data, row):
+            if not isinstance(i, (list, tuple)):
+                i = (i,)
 
-        else:
-            for i in self._data:
-                if not isinstance(i, (list, tuple)):
-                    i = (i,)
-
-                for ind, j in enumerate(self._data_to_list(i)):
-                    ws.cell(row, col + ind).value = _process_content(j, True)
-
-                row += 1
+            for ind, j in enumerate(self._data_to_list(i)):
+                ws.cell(row, col + ind).value = _process_content(j, True)
 
         wb.save(self.path)
         wb.close()
@@ -120,11 +107,12 @@ class MapGun(BaseRecorder):
         with open(self.path, 'r', encoding=self.encoding) as f:
             reader = csv_reader(f, delimiter=self.delimiter, quotechar=self.quote_char)
             lines = list(reader)
-            lines_len = len(lines)
-            row, col = self.coord
+            lines_count = len(lines)
+
+            row, col = _get_usable_coord(self.coord, lines_count, len(lines[0]) if lines_count else 1)
 
             # 若行数不够，填充行数
-            for _ in range(row + len(self._data) - lines_len):
+            for _ in range(row + len(self._data) - lines_count - 1):
                 lines.append([])
 
             # 填入数据

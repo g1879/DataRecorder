@@ -7,7 +7,7 @@ from typing import Union, List, Any, Tuple
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
 
-from .base import BaseRecorder, _parse_coord, _process_content
+from .base import BaseRecorder, _parse_coord, _process_content, _get_usable_coord
 
 
 class Filler(BaseRecorder):
@@ -219,7 +219,7 @@ class Filler(BaseRecorder):
         """填写数据到xlsx文件"""
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
-        max_column = ws.max_column
+        max_col = ws.max_column
 
         for i in self._data:
             if i[0] == 'set_link':
@@ -230,25 +230,10 @@ class Filler(BaseRecorder):
                     cell.value = _process_content(i[3], True)
                 continue
 
-            row, col = i[0]
-            if col < 0:
-                col = max_column + col + 1
-                if col < 1:
-                    raise ValueError(f'列号不能小于1。当前：{col}')
+            row, col = _get_usable_coord(i[0], ws.max_row, max_col)
 
-            if row is None:  # 新行
-                new_row = [None] * (col - 1)
-                new_row.extend([_process_content(j, True) for j in self._data_to_list(i[1:])])
-                ws.append(new_row)
-
-            else:
-                if row < 0:
-                    row = ws.max_row + row + 1
-                    if row < 1:
-                        raise ValueError(f'行号不能小于1。当前：{row}')
-
-                for key, j in enumerate(self._data_to_list(i[1:])):
-                    ws.cell(row, col + key).value = _process_content(j, True)
+            for key, j in enumerate(self._data_to_list(i[1:])):
+                ws.cell(row, col + key).value = _process_content(j, True)
 
         wb.save(self.path)
         wb.close()
@@ -266,31 +251,20 @@ class Filler(BaseRecorder):
 
             for i in self._data:
                 if i[0] == 'set_link':
-                    row, col1 = _parse_coord(i[1], self.data_col)
+                    coord = _parse_coord(i[1], self.data_col)
                     now_data = (f'=HYPERLINK("{i[2]}","{i[3] or i[2]}")',)
 
-                elif i[0][0] is None:  # 新行
-                    now_data = self._data_to_list(i[1:])
-                    row, col = lines_count + 1, i[0][1]
-
                 else:
+                    coord = i[0]
                     now_data = self._data_to_list(i[1:])
-                    row, col = i[0]
-                    if row < 0:
-                        row = lines_count + row + 1
-                        if row < 1:
-                            raise ValueError(f'行号不能小于1。当前：{row}')
+
+                row, col = _get_usable_coord(coord, lines_count, len(lines[0]) if lines_count else 1)
 
                 for _ in range(row - lines_count):  # 若行数不够，填充行数
                     lines.append([])
                     lines_count += 1
 
                 row_num = row - 1
-                line_len = len(lines[row_num])
-                if col < 0:
-                    col = line_len + col + 1
-                    if col < 1:
-                        raise ValueError(f'列号不能小于1。当前：{col}')
 
                 # 若列数不够，填充空列
                 lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
