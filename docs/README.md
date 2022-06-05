@@ -10,8 +10,6 @@
 
 **联系邮箱：** g1879@qq.com
 
-**使用手册：** 📒[点击打开](http://g1879.gitee.io/datarecorder)
-
 # ✨️理念
 
 简单，可靠，省心。
@@ -88,11 +86,11 @@ m.add_data(data, 'c4')  # 把二维数据填入以c4为左上角的区域中
 
 ## 二进制数据记录器`ByteRecorder`
 
-`ByteRecorder`用法最简单，它和`Recorder`类似，记录多个数据然后按顺序写入文件。不一样的是它只接收二进制数据，每次`add_data()`只能输入一条数据，而且没有行的概念。
+`ByteRecorder`用法最简单，它和`Recorder`类似，记录多个数据然后按顺序写入文件。不一样的是它只接收二进制数据，每次`add_data()`只能传入一条数据，没有行的概念。
 
 可以用来和作者的另一个工具 [FlowViewer](https://gitee.com/g1879/FlowViewer) 配合使用，用来获取浏览器加载的文件，或用来记录下载的文件。可指定每个数据写入文件中的位置，以支持多线程下载文件。 
 
-支持任意文件格式。
+它支持任意文件格式。
 
 ```python
 from DataRecorder import ByteRecorder
@@ -100,10 +98,6 @@ from DataRecorder import ByteRecorder
 b = ByteRecorder('data.file')
 b.add_data(b'xxxxxxxxxxx')  # 向文件写入二进制数据
 ```
-
-# 🛠使用方法
-
-[📒点击跳转到使用手册](http://g1879.gitee.io/datarecorder)
 
 # ☕ 请我喝咖啡
 

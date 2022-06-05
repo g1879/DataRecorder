@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta content="code-wXFsIBcC45" name="baidu-site-verification"/>
+    <title>DataRecorder</title>
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible"/>
+    <meta content="Description" name="description">
+    <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0" name="viewport">
+    <!--    <link href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css" rel="stylesheet">-->
+
+    <!-- Theme: Simple Dark -->
+    <link href="scripts/theme-simple-dark.css" rel="stylesheet">
+
+    <!--
+    <link href="//unpkg.com/gitalk/dist/gitalk.css" rel="stylesheet">
+    <link rel="stylesheet" href="./ignore/font.css">
+    -->
+    <style>
+    /*         body {font-family: PingFang; } */
+</style>
+
+</head>
+
+<body>
+<div id="app">加载中，如加载缓慢请刷新页面。</div>
+<script>
+    window.$docsify = {
+      count: {
+        countable: true,
+        fontsize: '0.9em',
+        color: 'rgb(90,90,90)',
+        language: 'chinese'
+      }, // 字数+分钟
+      formatUpdated: '{MM}/{DD} {HH}:{mm}', // 时间 格式 {}
+      notFoundPage: '错误页面/_404.md',
+      // logo: 'https://www.easyicon.net/api/resizeApi.php?id=1214577&size=24',
+      search: {
+        noData: {
+          '/': '😞 没有结果'
+        },
+        paths: 'auto',
+        placeholder: {
+          '/': '🔍 搜索'
+        }
+      },
+      name: 'DataRecorder',
+      repo: 'https://gitee.com/g1879/DataRecorder', // 主页
+      sidebarDisplayLevel: 0, // 折叠层级
+      autoHeader: true, // 自动增加标题
+      mergeNavbar: true, //小屏设备下合并导航栏到侧边栏
+      loadSidebar: true,
+      loadNavbar: true,
+      coverpage: true,
+      subMaxLevel: 2,
+      pagination: {
+        previousText: 'PREVIOUS',
+        nextText: 'NEXT',
+        crossChapter: true
+      },
+    }
+</script>
+
+<!-- v4 -->
+<script src="scripts/docsify@4.js"></script>
+<!-- 折叠侧边栏 -->
+<script src="scripts/docsify-sidebar-collapse.min.js"></script>
+<!--全文搜索,直接用官方提供的无法生效-->
+<script src="scripts/search.min.js"></script>
+<!-- 表情插件 -->
+<script src="scripts/emoji.min.js"></script>
+<!-- code高亮 -->
+<script src="scripts/prism-bash.min.js"></script>
+<script src="scripts/prism-python.min.js"></script>
+<!-- 复制代码到剪贴板 -->
+<script src="scripts/docsify-copy-code.min.js"></script>
+<!-- 图片缩放 -->
+<script src="scripts/zoom-image.js"></script>
+<!-- 字数统计 -->
+<script src="scripts/countable.js"></script>
+<!-- 翻页
+<script src="scripts/docsify-pagination.min.js"></script>
+-->
+</body>
+</html>

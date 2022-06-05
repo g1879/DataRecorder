@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
 from time import sleep
-from typing import Union, List, Tuple
+from typing import Union
 
 from .base import OriginalRecorder
 
@@ -16,32 +16,34 @@ class ByteRecorder(OriginalRecorder):
         super().__init__(path, cache_size)
 
     def add_data(self,
-                 data: Union[bytes, List[bytes], Tuple[bytes, ...]]) -> None:
-        """添加数据，可添加多个                   \n
+                 data: bytes,
+                 seek: int = None) -> None:
+        """添加一段二进制数据                      \n
         :param data: bytes或bytes组成的列表
+        :param seek: 在文件中的位置，None表示最后
         :return: None
         """
         while self._pause_add:
             sleep(.1)
 
-        if isinstance(data, bytes):
-            self._data.append(data)
-
-        elif isinstance(data, (list, tuple)):
-            if any([i for i in data if not isinstance(i, bytes)]):
-                raise TypeError('只能接受bytes类型数据。')
-            if isinstance(data, tuple):
-                data = list(data)
-
-            self._data.extend(data)
-
-        else:
+        if not isinstance(data, bytes):
             raise TypeError('只能接受bytes类型数据。')
+        if seek is not None and not (isinstance(seek, int) and seek >= 0):
+            raise ValueError('seek参数只能接受None或大于等于0的整数。')
+
+        self._data.append((data, seek))
 
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
     def _record(self) -> None:
         """记录数据到文件"""
-        with open(self.path, 'ab+') as f:
-            f.write(b''.join(self._data))
+        if not Path(self.path).exists():
+            with open(self.path, 'w'):
+                pass
+
+        with open(self.path, 'rb+') as f:
+            for i in self._data:
+                offset, whence = (0, 2) if i[1] is None else (i[1], 0)
+                f.seek(offset, whence)
+                f.write(i[0])

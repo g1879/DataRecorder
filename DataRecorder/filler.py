@@ -6,6 +6,7 @@ from typing import Union, List, Any, Tuple
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import column_index_from_string
+from openpyxl.styles import Font
 
 from .base import BaseRecorder, _parse_coord, _process_content, _get_usable_coord
 
@@ -37,6 +38,7 @@ class Filler(BaseRecorder):
         self.sign_col = sign_col
         self.sign = sign
         self.data_col = data_col or self.sign_col
+        self._link_font = Font(color="0000FF")
 
     @property
     def key_cols(self) -> List[int]:
@@ -196,6 +198,13 @@ class Filler(BaseRecorder):
             raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}')
         self.add_data((coord, link, content), 'set_link')
 
+    def set_link_style(self, style: Font = None) -> None:
+        """设置写入excel的链接样式，设为None时不改变样式         \n
+        :param style: Font对象
+        :return: None
+        """
+        self._link_font = style
+
     def _record(self) -> None:
         """记录数据"""
         if self.type == 'xlsx':
@@ -228,6 +237,8 @@ class Filler(BaseRecorder):
                 cell.hyperlink = _process_content(i[2], True)
                 if i[3] is not None:
                     cell.value = _process_content(i[3], True)
+                if self._link_font:
+                    cell.font = self._link_font
                 continue
 
             row, col = _get_usable_coord(i[0], ws.max_row, max_col)
