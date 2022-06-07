@@ -19,7 +19,7 @@ class Recorder(BaseRecorder):
         :param data: 插入的数据，元组或列表
         :return: None
         """
-        while self._pause_add:
+        while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
         if not isinstance(data, (list, tuple, dict)):
