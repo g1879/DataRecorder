@@ -5,8 +5,8 @@ from time import sleep
 from typing import Union, List, Any, Tuple
 
 from openpyxl import load_workbook, Workbook
-from openpyxl.utils import column_index_from_string
 from openpyxl.styles import Font
+from openpyxl.utils import column_index_from_string
 
 from .base import BaseRecorder, _parse_coord, _process_content, _get_usable_coord
 
@@ -158,7 +158,7 @@ class Filler(BaseRecorder):
         :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'。
         :return: None
         """
-        while self._pause_add:
+        while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
         if coord != 'set_link':
@@ -220,7 +220,6 @@ class Filler(BaseRecorder):
         :return: None
         """
         for i in self.keys:
-            print(i)
             self.add_data(func(i, *args), i[0])
         self.record()
 

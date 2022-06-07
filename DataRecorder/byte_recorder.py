@@ -23,7 +23,7 @@ class ByteRecorder(OriginalRecorder):
         :param seek: 在文件中的位置，None表示最后
         :return: None
         """
-        while self._pause_add:
+        while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
         if not isinstance(data, bytes):
@@ -43,7 +43,10 @@ class ByteRecorder(OriginalRecorder):
                 pass
 
         with open(self.path, 'rb+') as f:
+            previous = None
             for i in self._data:
-                offset, whence = (0, 2) if i[1] is None else (i[1], 0)
-                f.seek(offset, whence)
+                loc = (0, 2) if i[1] is None else (i[1], 0)
+                if not (previous == loc == (0, 2)):
+                    f.seek(loc[0], loc[1])
+                    previous = loc
                 f.write(i[0])

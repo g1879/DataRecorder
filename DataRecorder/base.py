@@ -3,6 +3,7 @@ from abc import abstractmethod
 from pathlib import Path
 from re import sub, match
 from threading import Lock
+from time import sleep
 from typing import Union, Tuple, Any
 
 from openpyxl import load_workbook, Workbook
@@ -27,6 +28,8 @@ class OriginalRecorder(object):
         self._type = None
         self._lock = Lock()
         self._pause_add = False  # 文件写入时暂停接收输入
+        self._pause_write = False  # 标记文件正在被一个线程写入
+        self.show_msg = True
 
         if path:
             self.set_path(path)
@@ -86,13 +89,14 @@ class OriginalRecorder(object):
 
         self._path = str(path) if isinstance(path, Path) else path
 
-    def record(self, new_path: Union[str, Path] = None) -> str:
+    def record(self, new_path: Union[str, Path] = None) -> Union[str, list]:
         """记录数据，可保存到新文件                                \n
         :param new_path: 文件另存为的路径，会保存新文件
-        :return: 返回记录文件的路径
+        :return: 成功返回文件路径，失败返回未保存的数据
         """
         # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
         original_path = return_path = self._path
+        return_data = None
         if new_path:
             new_path = str(get_usable_path(new_path))
             return_path = self._path = new_path
@@ -112,18 +116,30 @@ class OriginalRecorder(object):
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
             while True:
                 try:
+                    while self._pause_write:  # 等待其它线程写入结束
+                        sleep(.1)
+
+                    self._pause_write = True
                     self._record()
                     break
 
                 except PermissionError:
-                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                    if self.show_msg:
+                        print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
                 except Exception as e:
                     if self._data:
-                        print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                        if self.show_msg:
+                            print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                        return_data = self._data.copy()
                     if 'Python is likely shutting down' not in str(e):
                         raise
                     break
+
+                finally:
+                    self._pause_write = False
+
+                sleep(.3)
 
             if new_path:
                 self._path = original_path
@@ -131,7 +147,7 @@ class OriginalRecorder(object):
             self._data = []
             self._pause_add = False
 
-        return return_path
+        return return_data if return_data else return_path
 
     def clear(self) -> None:
         """清空缓存中的数据"""
