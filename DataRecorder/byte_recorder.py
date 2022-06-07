@@ -9,6 +9,7 @@ from .base import OriginalRecorder
 class ByteRecorder(OriginalRecorder):
     """用于记录字节数据的工具"""
     SUPPORTS = ('any',)
+    __END = (0, 2)
 
     def __init__(self,
                  path: Union[str, Path] = None,
@@ -45,8 +46,8 @@ class ByteRecorder(OriginalRecorder):
         with open(self.path, 'rb+') as f:
             previous = None
             for i in self._data:
-                loc = (0, 2) if i[1] is None else (i[1], 0)
-                if not (previous == loc == (0, 2)):
+                loc = ByteRecorder.__END if i[1] is None else (i[1], 0)
+                if not (previous == loc == ByteRecorder.__END):
                     f.seek(loc[0], loc[1])
                     previous = loc
                 f.write(i[0])
