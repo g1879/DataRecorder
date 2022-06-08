@@ -20,7 +20,7 @@ class ByteRecorder(OriginalRecorder):
                  data: bytes,
                  seek: int = None) -> None:
         """添加一段二进制数据                      \n
-        :param data: bytes或bytes组成的列表
+        :param data: bytes类型数据
         :param seek: 在文件中的位置，None表示最后
         :return: None
         """
