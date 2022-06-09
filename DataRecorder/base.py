@@ -244,7 +244,7 @@ class BaseRecorder(OriginalRecorder):
         pass
 
     def _data_to_list(self, data: Union[list, tuple, dict]) -> list:
-        """将传入的数据转换为列表形式                                  \n
+        """将传入的数据转换为列表形式，添加前后列数据                \n
         :param data: 要处理的数据
         :return: 转变成列表方式的数据
         """

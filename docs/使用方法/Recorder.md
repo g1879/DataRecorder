@@ -2,7 +2,7 @@
 
 它主要支持 csv、xlsx、json、txt 四种格式文件，当目标文件不是这 4 种之一时，按 txt 的方式记录。
 
-# 💥创建对象
+# 🐘创建对象
 
 ```python
 from DataRecorder imoprt Recorder
@@ -10,9 +10,11 @@ from DataRecorder imoprt Recorder
 r = Recorder(path='data.csv', cache_size=500)
 ```
 
+初始化参数：
+
 - `path`：文件路径，若不存在会自动创建，如存在则在最后追加数据。
 
-- `cache_size`：缓存数据条数，到达条数就会写入文件。
+- `cache_size`：缓存数据条数，到达条数自动写入文件。为 0 时不自动写入。
 
 # ➕添加数据
 
@@ -111,40 +113,11 @@ r.record()  # 手动调用写入方法
 
 ## ⚠️注意事项
 
-如果记录文件格式为 xlsx，程序退出自动记录功能无法使用，须显式调用`record()`方法，或把记录器声明放在一个方法内。
+如果对象为全局对象，那么在使用 xlsx 或多线程写入的时候，退出自动记录功能会报错，须显式调用`record()`方法，或把记录器声明放在一个方法内。
 
-错误做法：
+详见[《注意事项》](注意事项.md)一节。
 
-```python
-from DataRecorder import Recorder
 
-r = Recorder('test.xlsx')  # 使用 xlsx 格式
-r.add_data('abc')
-# 不显式调用 record()方法
-```
-
-正确做法1，显式调用`record()`方法：
-
-```python
-from DataRecorder import Recorder
-
-r = Recorder('test.xlsx')  # 使用 xlsx 格式
-r.add_data('abc')
-r.record()  # 显式调用 record()方法
-```
-
-正确做法2，把对象声明放在方法体内：
-
-```python
-from DataRecorder import Recorder
-
-def main():
-    r = Recorder('test.xlsx')  # r 的声明放在方法体内
-    r.add_data('abc')  # 可在程序结束时自动记录
-
-if __name__ == '__main__':
-    main()
-```
 
 # 📄文件格式
 

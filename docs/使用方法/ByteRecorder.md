@@ -10,7 +10,7 @@
 
 - 接收和写入数据分离，避免多线程时写入文件冲突
 
-# 💥创建对象
+# 🐘创建对象
 
 ```python
 from DataRecorder import ByteRecorder
@@ -18,13 +18,15 @@ from DataRecorder import ByteRecorder
 b = ByteRecorder(path='data.file', cache_size=50)
 ```
 
+初始化参数：
+
 - `path`：文件路径，若不存在会自动创建。
 
-- `cache_size`：缓存数据条数，到达条数就会写入文件。
+- `cache_size`：缓存数据条数，到达条数自动写入文件。为 0 时不自动写入。
 
 # ➕添加数据
 
-`ByteRecorder`只能接收二进制格式数据，且一次接收一条数据，可指定数据在文件中的位置，默认添加到文件末尾。
+`ByteRecorder`只能接收二进制格式数据，且一次接收一条数据，可指定数据在文件中的位置。如不指定，默认添加到文件末尾。
 
 ```python
 b.add_data(b'abcd')  # 将一条数据添加到文件末尾
@@ -44,6 +46,12 @@ ab1234
 # 📄写入文件
 
 这部分内容与`Recorder`一致。同样支持自动写入和手动写入。
+
+## ⚠️注意事项
+
+如果对象为全局对象，那么在使用 xlsx 或多线程写入的时候，退出自动记录功能会报错，须显式调用`record()`方法，或把记录器声明放在一个方法内。
+
+详见[《注意事项》](%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9.md)一节。
 
 # 📌示例
 

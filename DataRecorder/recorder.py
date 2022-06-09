@@ -24,10 +24,12 @@ class Recorder(BaseRecorder):
 
         if not isinstance(data, (list, tuple, dict)):
             data = (data,)
-        if data and (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) \
-                or isinstance(data, dict):
+        if not data:
+            data = (None,)
+        # 一维数组
+        if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
             self._data.append(data)
-        else:
+        else:  # 二维数组
             self._data.extend(data)
 
         if 0 < self.cache_size <= len(self._data):
@@ -98,7 +100,7 @@ class Recorder(BaseRecorder):
             dump(json_data, f)
 
     def _data_to_list_or_dict(self, data: Union[list, tuple, dict]) -> Union[list, dict]:
-        """将传入的数据转换为列表或字典形式，用于记录到txt或json          \n
+        """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json          \n
         :param data: 要处理的数据
         :return: 转变成列表或字典形式的数据
         """

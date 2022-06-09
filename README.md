@@ -60,7 +60,7 @@ r.add_data('abc')  # 记录单行数据
 
 ## 表格填充器`Filler`
 
-`Filler`用于对表格文件填写数据，它每次只接收一行数据，但可以指定填其坐标。它的使用非常灵活，还封装了记录数据处理进度的功能（比如断点续爬）。除此以外，它还能给单元格设置链接。
+`Filler`用于对表格文件填写数据，它每次只接收一行数据，但可以指定填其坐标。它的使用非常灵活，可以坐标为左上角填入一片二维数据，还封装了记录数据处理进度的功能（比如断点续爬）。除此以外，它还能给单元格设置链接。
 
 它只支持 csv 和 xlsx 格式文件。
 
@@ -69,21 +69,6 @@ from DataRecorder import Filler
 
 f = Filler('results.csv')
 f.add_data((1, 2, 3, 4), 'a2')  # 从A2单元格开始，写入一行数据
-```
-
-## 二维数据记录器`MapGun`
-
-`MapGun`用于对表格文件一次写入一整片二维数据。用法是指定一个坐标，然后以这个坐标为左上角，一次性填入整片数据。
-
-它只支持 csv 和 xlsx 格式文件。
-
-```python
-from DataRecorder import MapGun
-
-m = MapGun('results.csv')
-data = ((1, 2),
-        (3, 4))
-m.add_data(data, 'c4')  # 把二维数据填入以c4为左上角的区域中
 ```
 
 ## 二进制数据记录器`ByteRecorder`

@@ -113,8 +113,8 @@ class Filler(BaseRecorder):
 
     @property
     def keys(self) -> list:
-        """返回key列内容，第一位为行号，其余为key列的值  \n
-        eg.[3, '名称', 'id']
+        """返回一个列表，由未执行的行数据组成。每行的格式为第一位为行号，其余为 key 列的值。  \n
+        eg.[3, '张三', 20]
         """
         if self.type == 'csv':
             return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
@@ -147,7 +147,7 @@ class Filler(BaseRecorder):
         self.data_col = data_col or self.data_col
 
     def add_data(self, data: Any,
-                 coord: Union[list, Tuple[Union[None, int], int], str, int] = 'newline') -> None:
+                 coord: Union[list, Tuple[Union[None, int, str], int], str, int] = 'newline') -> None:
         """添加数据，每次添加一行数据，可指定坐标、列号或行号                                           \n
         coord只输入数字（行号）时，列号为self.data_col值，如 3；
         输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
@@ -198,8 +198,8 @@ class Filler(BaseRecorder):
             raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}')
         self.add_data((coord, link, content), 'set_link')
 
-    def set_link_style(self, style: Font = None) -> None:
-        """设置写入excel的链接样式，设为None时不改变样式         \n
+    def set_link_style(self, style: Font) -> None:
+        """设置excel的链接样式         \n
         :param style: Font对象
         :return: None
         """
@@ -212,38 +212,34 @@ class Filler(BaseRecorder):
         elif self.type == 'csv':
             self._to_csv()
 
-    def fill(self, func, *args) -> None:
-        """接收一个方法，根据keys自动填充数据。每条key调用一次该方法，并根据方法返回的内容进行填充。
-        方法第一个参数必须是接收keys（第一位是行号），并返回该行处理后的数据                      \n
-        :param func: 用于获取数据的方法，返回要填充的数据
-        :param args: 该方法的参数
-        :return: None
-        """
-        for i in self.keys:
-            self.add_data(func(i, *args), i[0])
-        self.record()
-
     def _to_xlsx(self) -> None:
         """填写数据到xlsx文件"""
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
         max_col = ws.max_column
 
-        for i in self._data:
-            if i[0] == 'set_link':
-                row, col = _parse_coord(i[1], self.data_col)
+        for data in self._data:
+            if data[0] == 'set_link':
+                coord = _parse_coord(data[1], self.data_col)
+                row, col = _get_usable_coord(coord, ws.max_row, max_col)
                 cell = ws.cell(row, col)
-                cell.hyperlink = _process_content(i[2], True)
-                if i[3] is not None:
-                    cell.value = _process_content(i[3], True)
+                cell.hyperlink = _process_content(data[2], True)
+                if data[3] is not None:
+                    cell.value = _process_content(data[3], True)
                 if self._link_font:
                     cell.font = self._link_font
                 continue
 
-            row, col = _get_usable_coord(i[0], ws.max_row, max_col)
+            row, col = _get_usable_coord(data[0], ws.max_row, max_col)
+            now_data = (data[1:],) if not isinstance(data[1], (list, tuple, dict)) else data[1:]
 
-            for key, j in enumerate(self._data_to_list(i[1:])):
-                ws.cell(row, col + key).value = _process_content(j, True)
+            for r, i in enumerate(now_data, row):
+                if not isinstance(i, (tuple, list, dict)):
+                    i = (i,)
+                if isinstance(i, dict):
+                    i = i.values()
+                for key, j in enumerate(self._data_to_list(i)):
+                    ws.cell(r, col + key).value = _process_content(j, True)
 
         wb.save(self.path)
         wb.close()
@@ -269,18 +265,25 @@ class Filler(BaseRecorder):
                     now_data = self._data_to_list(i[1:])
 
                 row, col = _get_usable_coord(coord, lines_count, len(lines[0]) if lines_count else 1)
+                now_data = (now_data,) if not isinstance(now_data[0], (list, tuple, dict)) else now_data
 
-                for _ in range(row - lines_count):  # 若行数不够，填充行数
-                    lines.append([])
-                    lines_count += 1
+                for r, data in enumerate(now_data, row):
+                    if not isinstance(data, (tuple, list, dict)):
+                        data = (data,)
+                    if isinstance(data, dict):
+                        data = data.values()
 
-                row_num = row - 1
+                    for _ in range(r - lines_count):  # 若行数不够，填充行数
+                        lines.append([])
+                        lines_count += 1
 
-                # 若列数不够，填充空列
-                lines[row_num].extend([None] * (col - len(lines[row_num]) + len(now_data) - 1))
+                    row_num = r - 1
 
-                for k, j in enumerate(now_data):  # 填充数据
-                    lines[row_num][col + k - 1] = _process_content(j)
+                    # 若列数不够，填充空列
+                    lines[row_num].extend([None] * (col - len(lines[row_num]) + len(data) - 1))
+
+                    for k, j in enumerate(data):  # 填充数据
+                        lines[row_num][col + k - 1] = _process_content(j)
 
             writer = csv_writer(open(self.path, 'w', encoding=self.encoding, newline=''), delimiter=self.delimiter,
                                 quotechar=self.quote_char)
