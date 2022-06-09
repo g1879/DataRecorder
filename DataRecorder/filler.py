@@ -116,6 +116,9 @@ class Filler(BaseRecorder):
         """返回一个列表，由未执行的行数据组成。每行的格式为第一位为行号，其余为 key 列的值。  \n
         eg.[3, '张三', 20]
         """
+        if not Path(self.path).exists():
+            return []
+
         if self.type == 'csv':
             return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
                                  self.delimiter, self.quote_char)
@@ -147,7 +150,7 @@ class Filler(BaseRecorder):
         self.data_col = data_col or self.data_col
 
     def add_data(self, data: Any,
-                 coord: Union[list, Tuple[Union[None, int, str], int], str, int] = 'newline') -> None:
+                 coord: Union[list, Tuple[Union[None, int, str], Union[int, str]], str, int] = 'newline') -> None:
         """添加数据，每次添加一行数据，可指定坐标、列号或行号                                           \n
         coord只输入数字（行号）时，列号为self.data_col值，如 3；
         输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
@@ -217,11 +220,18 @@ class Filler(BaseRecorder):
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
         ws = wb.active
         max_col = ws.max_column
+        empty = ws.max_column == ws.max_row == 1 and ws[1][0].value is None
 
         for data in self._data:
+            if empty:  # 如果是空文件，最大行数设为0，避免直接添加时出现空行
+                max_row = 0
+                empty = False
+            else:
+                max_row = ws.max_row
+
             if data[0] == 'set_link':
                 coord = _parse_coord(data[1], self.data_col)
-                row, col = _get_usable_coord(coord, ws.max_row, max_col)
+                row, col = _get_usable_coord(coord, max_row, max_col)
                 cell = ws.cell(row, col)
                 cell.hyperlink = _process_content(data[2], True)
                 if data[3] is not None:
@@ -230,7 +240,7 @@ class Filler(BaseRecorder):
                     cell.font = self._link_font
                 continue
 
-            row, col = _get_usable_coord(data[0], ws.max_row, max_col)
+            row, col = _get_usable_coord(data[0], max_row, max_col)
             now_data = (data[1:],) if not isinstance(data[1], (list, tuple, dict)) else data[1:]
 
             for r, i in enumerate(now_data, row):
