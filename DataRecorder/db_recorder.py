@@ -4,7 +4,7 @@ from sqlite3 import connect
 from time import sleep
 from typing import Union, Any
 
-from DataRecorder import Recorder
+from .recorder import Recorder
 
 
 class DBRecorder(Recorder):
@@ -75,7 +75,8 @@ class DBRecorder(Recorder):
         if new:
             data = self.data[0]
             table = data[0]
-            data = data[1]
+            data = data[1]  # 一维或二维数组
+            data = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
             _create_table(cur, table, data)
 
         # 获取所有表名和列名
@@ -88,10 +89,11 @@ class DBRecorder(Recorder):
         # 添加数据
         for data in self._data:
             table = data[0]
-            data = data[1]
+            data = data[1]  # 一维或二维数组
 
             if table not in tables:
-                name, cols = _create_table(cur, table, data)
+                d = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
+                name, cols = _create_table(cur, table, d)
                 tables[table] = cols
 
             now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
