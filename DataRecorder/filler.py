@@ -167,20 +167,10 @@ class Filler(BaseRecorder):
         if coord != 'set_link':
             coord = _parse_coord(coord, self.data_col)
 
-        new_data = [coord]
-        if isinstance(data, dict):
-            new_data.extend(list(data.values()))
+        if not isinstance(data, (list, tuple)):
+            data = (data,)
 
-        elif isinstance(data, tuple):
-            new_data.extend(list(data))
-
-        elif isinstance(data, list):
-            new_data.extend(data)
-
-        else:
-            new_data.append(data)
-
-        self._data.append(new_data)
+        self._data.append((coord, data))
 
         if 0 < self.cache_size <= len(self._data):
             self.record()
@@ -196,9 +186,9 @@ class Filler(BaseRecorder):
         :return: None
         """
         if not isinstance(link, str):
-            raise TypeError(f'link参数只能是str，不能是{type(link)}')
+            raise TypeError(f'link参数只能是str，不能是{type(link)}。')
         if not isinstance(content, (int, str, float, type(None))):
-            raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}')
+            raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}。')
         self.add_data((coord, link, content), 'set_link')
 
     def set_link_style(self, style: Font) -> None:
@@ -241,13 +231,9 @@ class Filler(BaseRecorder):
                 continue
 
             row, col = _get_usable_coord(data[0], max_row, max_col)
-            now_data = (data[1:],) if not isinstance(data[1], (list, tuple, dict)) else data[1:]
+            now_data = (data[1],) if not isinstance(data[1][0], (list, tuple, dict)) else data[1]
 
             for r, i in enumerate(now_data, row):
-                if not isinstance(i, (tuple, list, dict)):
-                    i = (i,)
-                if isinstance(i, dict):
-                    i = i.values()
                 for key, j in enumerate(self._data_to_list(i)):
                     ws.cell(r, col + key).value = _process_content(j, True)
 
@@ -272,16 +258,13 @@ class Filler(BaseRecorder):
 
                 else:
                     coord = i[0]
-                    now_data = self._data_to_list(i[1:])
+                    now_data = i[1]
 
                 row, col = _get_usable_coord(coord, lines_count, len(lines[0]) if lines_count else 1)
                 now_data = (now_data,) if not isinstance(now_data[0], (list, tuple, dict)) else now_data
 
                 for r, data in enumerate(now_data, row):
-                    if not isinstance(data, (tuple, list, dict)):
-                        data = (data,)
-                    if isinstance(data, dict):
-                        data = data.values()
+                    data = self._data_to_list(data)
 
                     for _ in range(r - lines_count):  # 若行数不够，填充行数
                         lines.append([])

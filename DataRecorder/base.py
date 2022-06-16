@@ -14,6 +14,7 @@ from .tools import get_usable_path
 
 
 class OriginalRecorder(object):
+    """记录器的基类"""
     SUPPORTS = ('any',)
 
     def __init__(self,
@@ -59,10 +60,19 @@ class OriginalRecorder(object):
         """返回文件路径"""
         return self._path
 
+    @path.setter
+    def path(self, path: Union[str, Path]) -> None:
+        self.set_path(path)
+
     @property
     def type(self) -> str:
         """返回文件类型"""
         return self._type
+
+    @type.setter
+    def type(self, file_type: str) -> None:
+        """指定文件类型，无视文件后缀名"""
+        self._type = file_type
 
     @property
     def data(self) -> list:
@@ -163,7 +173,7 @@ class OriginalRecorder(object):
 
 
 class BaseRecorder(OriginalRecorder):
-    """记录器的父类"""
+    """Recorder和Filler的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
@@ -271,13 +281,13 @@ def _set_csv_head(file_path: str,
                   head: Union[list, tuple],
                   encoding: str = 'utf-8',
                   delimiter: str = ',',
-                  quotechar: str = '"') -> None:
+                  quote_char: str = '"') -> None:
     """设置csv文件的表头              \n
     :param file_path: 文件路径
     :param head: 表头列表或元组
     :param encoding: 编码
     :param delimiter: 分隔符
-    :param quotechar: 引用符
+    :param quote_char: 引用符
     :return: None
     """
     from csv import writer
@@ -286,7 +296,7 @@ def _set_csv_head(file_path: str,
             content = "".join(f.readlines()[1:])
 
         with open(file_path, 'w', newline='', encoding=encoding) as f:
-            csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
+            csv_write = writer(f, delimiter=delimiter, quotechar=quote_char)
             csv_write.writerow(_ok_list(head))
 
         with open(file_path, 'a+', newline='', encoding=encoding) as f:
@@ -294,7 +304,7 @@ def _set_csv_head(file_path: str,
 
     else:
         with open(file_path, 'w', newline='', encoding=encoding) as f:
-            csv_write = writer(f, delimiter=delimiter, quotechar=quotechar)
+            csv_write = writer(f, delimiter=delimiter, quotechar=quote_char)
             csv_write.writerow(_ok_list(head))
 
 
@@ -408,6 +418,7 @@ def _ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = F
     """处理列表中数据使其符合保存规范             \n
     :param data_list: 数据列表
     :param excel: 是否保存在excel
+    :param as_str: 内容是否转为字符串
     :return: 处理后的列表
     """
     if isinstance(data_list, dict):

@@ -5,6 +5,7 @@
 * [🛠 使用方法](#)
   
   * [🔨 记录器 Recorder](使用方法\Recorder.md)
+  * [🔨 数据库记录器 DBRecorder（测试）](使用方法\DBRecorder.md)
   * [🔨 表格填充器 Filler](使用方法\Filler.md)
   * [🔨 二进制数据记录器 ByteRecorder](使用方法\ByteRecorder.md)
   * [🔨 进阶用法](使用方法\进阶用法.md)

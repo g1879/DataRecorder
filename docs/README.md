@@ -1,6 +1,4 @@
-# ⭐️简介
-
-本库是一个基于 python 的工具集，用于记录数据到文件。
+本库是一个基于 python 的工具集，用于记录数据到文件（含 sqlite）。
 
 使用方便，代码简洁， 是一个可靠、省心且实用的工具。
 
@@ -67,13 +65,14 @@ from DataRecorder import Filler
 
 f = Filler('results.csv')
 f.add_data((1, 2, 3, 4), 'a2')  # 从A2单元格开始，写入一行数据
+f.add_data(((1, 2), (3, 4)), 'd4')  # 以D4单元格为左上角，写入一片二维数据
 ```
 
 ## ⚡二进制数据记录器`ByteRecorder`
 
 `ByteRecorder`用法最简单，它和`Recorder`类似，记录多个数据然后按顺序写入文件。不一样的是它只接收二进制数据，每次`add_data()`只能传入一条数据，没有行的概念。
 
-可以用来和作者的另一个工具 [FlowViewer](https://gitee.com/g1879/FlowViewer) 配合使用，用来获取浏览器加载的文件，或用来记录下载的文件。可指定每个数据写入文件中的位置，以支持多线程下载文件。 
+可以用来和作者的另一个工具 [FlowViewer](https://gitee.com/g1879/FlowViewer) 配合使用，用来获取浏览器加载的文件，或用来记录下载的文件。可指定每个数据写入文件中的位置，以支持多线程下载文件。
 
 它支持任意文件格式。
 
@@ -82,6 +81,18 @@ from DataRecorder import ByteRecorder
 
 b = ByteRecorder('data.file')
 b.add_data(b'xxxxxxxxxxx')  # 向文件写入二进制数据
+```
+
+## ⚡数据库记录器`DBRecorder`（测试）
+
+3.1 版增加的功能，目前只支持 sqlite，用法和`Recorder`一致，支持自动创建数据库、数据表、数据列。
+
+```python
+from DataRecorder import DBRecorder
+
+d = DBRecorder('data.db')
+d.add_data({'name': '张三', 'age': 25}, table='user')  # 插入数据到user表
+d.record()
 ```
 
 # ☕ 请我喝咖啡
