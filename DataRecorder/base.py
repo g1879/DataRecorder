@@ -79,17 +79,20 @@ class OriginalRecorder(object):
         """返回当前保存在缓存的数据"""
         return self._data
 
-    def set_path(self, path: Union[str, Path]) -> None:
-        """设置文件路径                \n
+    def set_path(self, path: Union[str, Path], file_type: str = None) -> None:
+        """设置文件路径                                            \n
         :param path: 文件路径
+        :param file_type: 要设置的文件类型，为空则从文件名中获取
         :return: None
         """
-        if isinstance(path, str):
+        if file_type is not None and isinstance(file_type, str):
+            self._type = file_type
+        elif isinstance(path, str):
             self._type = path.split('.')[-1].lower()
         elif isinstance(path, Path):
             self._type = path.suffix[1:].lower()
         else:
-            raise TypeError(f'参数file_path只能是str或Path，非{type(path)}。')
+            raise TypeError(f'参数path只能是str或Path，非{type(path)}。')
 
         if self._type not in self.SUPPORTS and 'any' not in self.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self.SUPPORTS)}格式文件。')

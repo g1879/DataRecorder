@@ -19,8 +19,15 @@ class DBRecorder(Recorder):
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         :param table: 默认表名
         """
+        self._conn = None
+        self._cur = None
         super().__init__(path, cache_size)
         self.table = table
+
+    def __del__(self):
+        """重写父类方法"""
+        super().__del__()
+        self._close_connection()
 
     @property
     def table(self) -> str:
@@ -31,6 +38,17 @@ class DBRecorder(Recorder):
     def table(self, name: str) -> None:
         """设置默认表名"""
         self._table = name
+
+    def set_path(self, path: Union[str, Path], file_type: str = None) -> None:
+        """重写父类方法                    \n
+        :param path: 文件路径
+        :param file_type: 文件类型
+        :return: None
+        """
+        super().set_path(path, file_type)
+        if self._conn is not None:
+            self._close_connection()
+        self._connect()
 
     def set_table(self, table: str) -> None:
         """设置默认表名
@@ -60,6 +78,17 @@ class DBRecorder(Recorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
+    def _connect(self) -> None:
+        """链接数据库"""
+        self._conn = connect(self.path)
+        self._cur = self._conn.cursor()
+
+    def _close_connection(self) -> None:
+        """关闭数据库 """
+        if self._conn is not None:
+            self._cur.close()
+            self._conn.close()
+
     def _record(self) -> None:
         """记录数据"""
         if self.type == 'db':
@@ -67,33 +96,21 @@ class DBRecorder(Recorder):
 
     def _to_sqlite(self) -> None:
         """保存数据到sqlite"""
-        # 每个数据格式为(表名，一维或二维数据)
-        new = not Path(self.path).exists()
-
-        conn = connect(self.path)
-        cur = conn.cursor()
-        if new:
-            data = self.data[0]
-            table = data[0]
-            data = data[1]  # 一维或二维数组
-            data = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
-            _create_table(cur, table, data)
-
         # 获取所有表名和列名
-        cur.execute("select name from sqlite_master where type='table'")
+        self._cur.execute("select name from sqlite_master where type='table'")
         tables = {}
-        for table in cur.fetchall():
-            cur.execute(f"PRAGMA table_info({table[0]})")
-            tables[table[0]] = [i[1] for i in cur.fetchall()]
+        for table in self._cur.fetchall():
+            self._cur.execute(f"PRAGMA table_info({table[0]})")
+            tables[table[0]] = [i[1] for i in self._cur.fetchall()]
 
-        # 添加数据
+        # 添加数据，每个数据格式为(表名，一维或二维数据)
         for data in self._data:
             table = data[0]
             data = data[1]  # 一维或二维数组
 
             if table not in tables:
                 d = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
-                name, cols = _create_table(cur, table, d)
+                name, cols = _create_table(self._cur, table, d)
                 tables[table] = cols
 
             now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
@@ -106,7 +123,7 @@ class DBRecorder(Recorder):
                     for key in keys:  # 检查是否要新增列
                         if key not in tables[table]:
                             sql = f'ALTER TABLE {table} ADD COLUMN {key}'
-                            cur.execute(sql)
+                            self._cur.execute(sql)
                             tables[table].append(key)
 
                     keys_txt = ','.join(keys)
@@ -122,11 +139,9 @@ class DBRecorder(Recorder):
                     values = ','.join([str(i) if not isinstance(i, str) else f'"{i}"' for i in d])
 
                 sql = f'INSERT INTO {table} ({keys_txt}) values ({values})'
-                cur.execute(sql)
+                self._cur.execute(sql)
 
-        conn.commit()
-        cur.close()
-        conn.close()
+        self._conn.commit()
 
 
 def _create_table(cursor, table_name: str, data: dict) -> tuple:

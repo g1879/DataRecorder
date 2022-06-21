@@ -359,6 +359,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 参数：
 
 - path：文件路径，可以是`str`或`Path`对象
+- file_type：要设置的文件类型，为空则从文件名中获取
 
 返回：None
 
