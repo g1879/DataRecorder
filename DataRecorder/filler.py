@@ -220,12 +220,12 @@ class Filler(BaseRecorder):
                 max_row = ws.max_row
 
             if data[0] == 'set_link':
-                coord = _parse_coord(data[1], self.data_col)
+                coord = _parse_coord(data[1][0], self.data_col)
                 row, col = _get_usable_coord(coord, max_row, max_col)
                 cell = ws.cell(row, col)
-                cell.hyperlink = _process_content(data[2], True)
-                if data[3] is not None:
-                    cell.value = _process_content(data[3], True)
+                cell.hyperlink = _process_content(data[1][1], True)
+                if data[1][2] is not None:
+                    cell.value = _process_content(data[1][2], True)
                 if self._link_font:
                     cell.font = self._link_font
                 continue
@@ -253,8 +253,8 @@ class Filler(BaseRecorder):
 
             for i in self._data:
                 if i[0] == 'set_link':
-                    coord = _parse_coord(i[1], self.data_col)
-                    now_data = (f'=HYPERLINK("{i[2]}","{i[3] or i[2]}")',)
+                    coord = _parse_coord(i[1][0], self.data_col)
+                    now_data = (f'=HYPERLINK("{i[1][1]}","{i[1][2] or i[1][1]}")',)
 
                 else:
                     coord = i[0]
