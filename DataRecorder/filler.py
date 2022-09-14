@@ -17,17 +17,17 @@ class Filler(BaseRecorder):
     def __init__(self,
                  path: Union[str, Path],
                  cache_size: int = None,
-                 key_cols: Union[str, int, list, tuple] = 1,
+                 key_cols: Union[str, int, list, tuple, bool] = True,
                  begin_row: int = 2,
-                 sign_col: Union[str, int] = 2,
+                 sign_col: Union[str, int, bool] = True,
                  sign: str = None,
                  data_col: Union[int, str] = None) -> None:
-        """初始化                                                    \n
+        """初始化                                                       \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
-        :param key_cols: 作为关键字的列，可以是多列，从1开始
+        :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行
         :param begin_row: 数据开始的行，默认表头一行
-        :param sign_col: 用于判断是否已填数据的列，从1开始
+        :param sign_col: 用于判断是否已填数据的列，从1开始，True表示获取所有行
         :param sign: 按这个值判断是否已填数据
         :param data_col: 要填入数据的第一列，从1开始
         """
@@ -37,46 +37,54 @@ class Filler(BaseRecorder):
         self.begin_row = begin_row
         self.sign_col = sign_col
         self.sign = sign
-        self.data_col = data_col or self.sign_col
+        if data_col:
+            self.data_col = data_col
+        elif sign_col:
+            self.data_col = sign_col
+        else:
+            self.data_col = 1
         self._link_font = Font(color="0000FF")
 
     @property
-    def key_cols(self) -> List[int]:
+    def key_cols(self) -> Union[List[int], bool]:
         """返回作为关键字的列或列的集合"""
         return self._key_cols
 
     @key_cols.setter
-    def key_cols(self, cols: Union[str, int, list, tuple]) -> None:
+    def key_cols(self, cols: Union[str, int, list, tuple, bool]) -> None:
         """设置作为关键字的列，可以是多列                    \n
         :param cols: 列号或列名，或它们组成的list或tuple
         :return: None
         """
-        if isinstance(cols, int) and cols > 0:
+        if cols is True:
+            self._key_cols = True
+        elif isinstance(cols, int) and cols > 0:
             self._key_cols = [cols]
         elif isinstance(cols, str):
-            self._key_cols = [column_index_from_string(cols)]
+            self._key_cols = [int(cols)] if cols.isdigit() else [column_index_from_string(cols)]
         elif isinstance(cols, (list, tuple)):
-            self._key_cols = [i if isinstance(i, int) and i > 0 else column_index_from_string(i) for i in cols]
+            self._key_cols = [i if isinstance(i, int) and i > 0 else
+                              int(i) if i.isdigit() else column_index_from_string(i) for i in cols]
         else:
             raise TypeError('col值只能是int或str，且必须大于0。')
 
     @property
-    def sign_col(self) -> int:
+    def sign_col(self) -> Union[int, None, bool]:
         """返回用于判断是否已填数据的列"""
         return self._sign_col
 
     @sign_col.setter
-    def sign_col(self, col: Union[str, int]) -> None:
+    def sign_col(self, col: Union[str, int, bool]) -> None:
         """设置用于判断是否已填数据的列       \n
         :param col: 列号或列名
         :return: None
         """
-        if isinstance(col, int) and col > 0:
+        if col is True or (isinstance(col, int) and col > 0):
             self._sign_col = col
         elif isinstance(col, str):
-            self._sign_col = column_index_from_string(col)
+            self._sign_col = int(col) if col.isdigit() else column_index_from_string(col)
         else:
-            raise TypeError('col值只能是int或str，且必须大于0。')
+            raise TypeError('col值只能是True、int或str，且必须大于0。')
 
     @property
     def data_col(self) -> int:
@@ -285,7 +293,7 @@ class Filler(BaseRecorder):
 
 def _get_xlsx_keys(path: str,
                    begin_row: int,
-                   sign_col: Union[int, str],
+                   sign_col: Union[int, str, None],
                    sign: Union[int, float, str],
                    key_cols: Union[list, tuple]) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
@@ -305,13 +313,27 @@ def _get_xlsx_keys(path: str,
         wb = load_workbook(path, data_only=True)
         ws = wb.active
 
-    if sign_col > ws.max_column:
-        res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                    for ind, row in enumerate(ws.rows, 1) if ind >= begin_row]
+    rows = ws.rows
+    for _ in range(begin_row - 1):
+        next(rows)
+
+    if sign_col is True or sign_col > ws.max_column:  # 获取所有行
+        if key_cols is True:  # 获取整行
+            res_keys = [[ind] + [i.value for i in row]
+                        for ind, row in enumerate(rows, begin_row)]
+        else:  # 只获取对应的列
+            res_keys = [[ind] + [row[i - 1].value for i in key_cols]
+                        for ind, row in enumerate(rows, begin_row)]
+
     else:
-        res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                    for ind, row in enumerate(ws.rows, 1)
-                    if ind >= begin_row and row[sign_col - 1].value == sign]
+        if key_cols is True:  # 获取整行
+            res_keys = [[ind] + [i.value for i in row]
+                        for ind, row in enumerate(rows, begin_row)
+                        if row[sign_col - 1].value == sign]
+        else:  # 只获取对应的列
+            res_keys = [[ind] + [row[i - 1].value for i in key_cols]
+                        for ind, row in enumerate(rows, begin_row)
+                        if row[sign_col - 1].value == sign]
 
     wb.close()
     return res_keys
@@ -319,7 +341,7 @@ def _get_xlsx_keys(path: str,
 
 def _get_csv_keys(path: str,
                   begin_row: int,
-                  sign_col: Union[int, str],
+                  sign_col: Union[int, str, None],
                   sign: Union[int, float, str],
                   key_cols: Union[list, tuple],
                   encoding: str,
@@ -338,7 +360,6 @@ def _get_csv_keys(path: str,
     :return: 关键字组成的列表
     """
     sign = '' if sign is None else str(sign)
-    sign_col -= 1
     begin_row -= 1
     res_keys = []
 
@@ -346,9 +367,21 @@ def _get_csv_keys(path: str,
         reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
         lines = list(reader)[begin_row:]
 
-        for ind, line in enumerate(lines, begin_row + 1):
-            row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
-            if row_sign == sign:
-                res_keys.append([ind] + [line[i - 1] for i in key_cols])
+        if sign_col is not True:  # 获取符合条件的行
+            sign_col -= 1
+            for ind, line in enumerate(lines, begin_row + 1):
+                row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
+                if row_sign == sign:
+                    if key_cols is True:  # 获取整行
+                        res_keys.append([ind] + line)
+                    else:  # 只获取对应的列
+                        res_keys.append([ind] + [line[i - 1] for i in key_cols])
+
+        else:  # 获取所有行
+            for ind, line in enumerate(lines, begin_row + 1):
+                if key_cols is True:  # 获取整行
+                    res_keys.append([ind] + line)
+                else:  # 只获取对应的列
+                    res_keys.append([ind] + [line[i - 1] for i in key_cols])
 
     return res_keys
