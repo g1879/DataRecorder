@@ -30,9 +30,11 @@ f = Filler(path='data.csv', cache_size=50)
 
 - `sign_col`：用于判断是否已填数据的列，可以接收列号数字或字母，从1开始
 
-- `sign`：按这个值判断是否已填数据
-
 - `data_col`：要填入数据的第一列，可以接收列号数字或字母，从1开始
+
+- `sign`：按这个值筛选需要的行纳入`keys`
+
+- `deny_sign`：是否反向匹配`sign`，即筛选`sign_col`列值不是`sign`的行
 
 # ➕添加数据
 
@@ -164,8 +166,8 @@ url，须要设计一个程序把文件下载到指定地方，并把路径填�
 
 可见表格文件里第一列是要下载的文件 url，第二列用于标记是否已下载，第三列下载后回填保存路径。
 
-我们可以给`Filler`指定第一列为 key 列，第二列为 sign 列。程序可以根据 sign 内容判断哪些行是须要执行任务的，用`keys`属性获取要执行的任务数据，然后把执行结果回填到 sign 列，如果中途中断了，下次执行会从
-sign 列为空的行继续执行。
+我们可以给`Filler`指定第一列为 key 列，第二列为 sign 列。程序可以根据 sign 内容判断哪些行是须要执行任务的，用`keys`
+属性获取要执行的任务数据，然后把执行结果回填到 sign 列，如果中途中断了，下次执行会从sign 列为空的行继续执行。
 
 创建对象，并把 keys 打印出来看看：
 
@@ -221,9 +223,15 @@ for key in f.keys:  # 遍历任务
 
 - `key_cols`参数可以指定多列，传入列号组成的列表即可，列号可以用字母或数字。会返回多个 key 值（行号依然是第一位）。
 
+- `key_cols`默认为`True`，表示获取所有列。
+
 - 如果一行中要回填的数据不连续，那可以用多个`add_data()`方法填写，每个方法传入单元格坐标，如`add_data(data, (row, 'd')`。
 
 - 默认情况下`sign`参数为`None`，即单元格内容为空就认为这行是未执行的。可以通过`sign`参数设置其它值。如设置`'未执行'`为标记。
+
+- `sign_col`默认为`True`，表示不进行筛选，直接获取所有行。此时`data_col`值默认为`1`。
+
+- `deny_sign`参数如果为`True`，表示筛选`sign_col`列值不是`sign`的行
 
 # 🔗设置单元格链接
 
@@ -235,7 +243,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 这样设置即可对 A5 单元格设置指向该网址的链接，其中`content`参数是可选的。
 
-# 🔣`ByteRecorder`属性
+# 🔣`Filler`对象的属性
 
 ## `path`
 
@@ -305,7 +313,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 此属性用于设置是否打印程序运行时产生的提示信息。
 
-# ♾️`Recorder`方法
+# ♾️`Recorder`对象的方法
 
 ## `add_data()`
 
@@ -316,7 +324,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 - data：可接收任意格式，接收一维`list`、`tuple`和`dict`时记录为一行，接收二维数据时记录为多行
 - coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'。也可以是负数，代表从下往上数，-1是倒数第一行。为`None`时表示新增行。
 
-返回：None
+返回：`None`
 
 ## `set_link()`
 
@@ -330,7 +338,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 - content：单元格文本，不传入时显式超链接文本
 
-返回：None
+返回：`None`
 
 ## `set_link_style()`
 
@@ -338,9 +346,9 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 参数：
 
-- style：openpyxl 的 Font 对象
+- style：openpyxl 的`Font`对象
 
-返回：None
+返回：`None`
 
 ## `record()`
 
@@ -358,10 +366,16 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 参数：
 
-- path：文件路径，可以是`str`或`Path`对象
-- file_type：要设置的文件类型，为空则从文件名中获取
+- `path`：文件路径，可以是`str`或`Path`对象
+- `cache_size`：每接收多少条记录写入文件，传入`0`表示不自动保存
+- `key_cols`：作为关键字的列，可以是多列，从1开始，`True`表示获取整行
+- `begin_row`：数据开始的行，默认表头一行
+- `sign_col`：用于判断是否已填数据的列，从1开始，`True`表示获取所有行
+- `data_col`：要填入数据的第一列，从1开始
+- `sign`：按这个值筛选需要的行纳入`keys`
+- `deny_sign`：是否反向匹配`sign`，即筛选`sign_col列`值不是`sign`的行
 
-返回：None
+返回：`None`
 
 ## `clear()`
 
@@ -369,7 +383,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 参数：无
 
-返回：None
+返回：`None`
 
 ## `set_head()`
 
@@ -379,7 +393,7 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 - head：表头，接收`list`或`tuple`
 
-返回：None
+返回：`None`
 
 ## `set_before()`
 
@@ -391,7 +405,7 @@ before 内容的用法将在《进阶用法》章节说明。
 
 - before：每行数据前要添加的内容，单个数据或列表数据皆可
 
-返回：None
+返回：`None`
 
 ## `set_after()`
 
@@ -403,4 +417,4 @@ after 内容的用法将在《进阶用法》章节说明。
 
 - after：每行数据后要添加的内容，单个数据或列表数据皆可
 
-返回：None
+返回：`None`

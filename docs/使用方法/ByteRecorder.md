@@ -89,7 +89,7 @@ if __name__ == '__main__':
 4444444444
 ```
 
-# 🔣`ByteRecorder`属性
+# 🔣`ByteRecorder`对象的属性
 
 ## `path`
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
 此属性用于设置是否打印程序运行时产生的提示信息。
 
-# ♾️`ByteRecorder`方法
+# ♾️`ByteRecorder`对象的方法
 
 ## `add_data()`
 
@@ -119,10 +119,10 @@ if __name__ == '__main__':
 
 参数：
 
-- data：bytes类型数据
-- seek：在文件中的位置，None表示最后
+- `data`：`bytes`类型数据
+- `seek`：在文件中的位置，`None`表示最后
 
-返回：None
+返回：`None`
 
 ## `record()`
 
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
 参数：
 
-- new_path：保存到新文件的路径
+- `new_path`：保存到新文件的路径
 
 返回：成功时以文本方式返回文件路径，失败时返回未保存的数据
 
@@ -140,10 +140,10 @@ if __name__ == '__main__':
 
 参数：
 
-- path：文件路径，可以是`str`或`Path`对象
-- file_type：要设置的文件类型，为空则从文件名中获取
+- `path`：文件路径，可以是`str`或`Path`对象
+- `file_type`：要设置的文件类型，为空则从文件名中获取
 
-返回：None
+返回：`None`
 
 ## `clear()`
 
@@ -151,4 +151,4 @@ if __name__ == '__main__':
 
 参数：无
 
-返回：None
+返回：`None`

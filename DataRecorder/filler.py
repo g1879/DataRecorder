@@ -20,16 +20,18 @@ class Filler(BaseRecorder):
                  key_cols: Union[str, int, list, tuple, bool] = True,
                  begin_row: int = 2,
                  sign_col: Union[str, int, bool] = True,
+                 data_col: Union[int, str] = None,
                  sign: str = None,
-                 data_col: Union[int, str] = None) -> None:
+                 deny_sign: bool = False) -> None:
         """初始化                                                       \n
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行
         :param begin_row: 数据开始的行，默认表头一行
         :param sign_col: 用于判断是否已填数据的列，从1开始，True表示获取所有行
-        :param sign: 按这个值判断是否已填数据
         :param data_col: 要填入数据的第一列，从1开始
+        :param sign: 按这个值筛选需要的行纳入keys
+        :param deny_sign: 是否反向匹配sign，即筛选sign_col列值不是sign的行
         """
         super().__init__(None, cache_size)
         super().set_path(path)
@@ -37,6 +39,7 @@ class Filler(BaseRecorder):
         self.begin_row = begin_row
         self.sign_col = sign_col
         self.sign = sign
+        self.deny_sign = deny_sign
         if data_col:
             self.data_col = data_col
         elif sign_col:
@@ -129,24 +132,26 @@ class Filler(BaseRecorder):
 
         if self.type == 'csv':
             return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
-                                 self.delimiter, self.quote_char)
+                                 self.delimiter, self.quote_char, self.deny_sign)
         elif self.type == 'xlsx':
-            return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols)
+            return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.deny_sign)
 
     def set_path(self,
                  path: Union[str, Path],
                  key_cols: Union[str, int, list, tuple] = None,
                  begin_row: int = None,
                  sign_col: Union[str, int] = None,
+                 data_col: int = None,
                  sign: Union[int, float, str] = None,
-                 data_col: int = None) -> None:
+                 deny_sign: bool = None) -> None:
         """设置文件路径                             \n
         :param path: 保存的文件路径
         :param key_cols: 作为关键字的列，可以是多列
         :param begin_row: 数据开始的行，默认表头一行
         :param sign_col: 用于判断是否已填数据的列
-        :param sign: 按这个值判断是否已填数据
         :param data_col: 要填入数据的第一列
+        :param sign: 按这个值判断是否已填数据
+        :param deny_sign: 是否反向匹配sign，即筛选指不是sign的行
         """
         if not path or not Path(path).exists():
             raise FileNotFoundError('文件不存在')
@@ -156,6 +161,7 @@ class Filler(BaseRecorder):
         self.sign_col = sign_col or self.sign_col
         self.sign = sign or self.sign
         self.data_col = data_col or self.data_col
+        self.deny_sign = deny_sign if deny_sign is not None else self.deny_sign
 
     def add_data(self, data: Any,
                  coord: Union[list, Tuple[Union[None, int, str], Union[int, str]], str, int] = 'newline') -> None:
@@ -264,6 +270,9 @@ class Filler(BaseRecorder):
                     coord = _parse_coord(i[1][0], self.data_col)
                     now_data = (f'=HYPERLINK("{i[1][1]}","{i[1][2] or i[1][1]}")',)
 
+                # elif i[0] in ('set_color', 'set_background'):
+                #     continue
+
                 else:
                     coord = i[0]
                     now_data = i[1]
@@ -295,7 +304,8 @@ def _get_xlsx_keys(path: str,
                    begin_row: int,
                    sign_col: Union[int, str, None],
                    sign: Union[int, float, str],
-                   key_cols: Union[list, tuple]) -> List[list]:
+                   key_cols: Union[list, tuple],
+                   deny_sign: bool) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
@@ -325,15 +335,26 @@ def _get_xlsx_keys(path: str,
             res_keys = [[ind] + [row[i - 1].value for i in key_cols]
                         for ind, row in enumerate(rows, begin_row)]
 
-    else:
+    else:  # 获取符合条件的行
         if key_cols is True:  # 获取整行
-            res_keys = [[ind] + [i.value for i in row]
-                        for ind, row in enumerate(rows, begin_row)
-                        if row[sign_col - 1].value == sign]
+            if deny_sign:
+                res_keys = [[ind] + [i.value for i in row]
+                            for ind, row in enumerate(rows, begin_row)
+                            if row[sign_col - 1].value != sign]
+            else:
+                res_keys = [[ind] + [i.value for i in row]
+                            for ind, row in enumerate(rows, begin_row)
+                            if row[sign_col - 1].value == sign]
+
         else:  # 只获取对应的列
-            res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                        for ind, row in enumerate(rows, begin_row)
-                        if row[sign_col - 1].value == sign]
+            if deny_sign:
+                res_keys = [[ind] + [row[i - 1].value for i in key_cols]
+                            for ind, row in enumerate(rows, begin_row)
+                            if row[sign_col - 1].value != sign]
+            else:
+                res_keys = [[ind] + [row[i - 1].value for i in key_cols]
+                            for ind, row in enumerate(rows, begin_row)
+                            if row[sign_col - 1].value == sign]
 
     wb.close()
     return res_keys
@@ -346,7 +367,8 @@ def _get_csv_keys(path: str,
                   key_cols: Union[list, tuple],
                   encoding: str,
                   delimiter: str,
-                  quotechar: str) -> List[list]:
+                  quotechar: str,
+                  deny_sign: bool) -> List[list]:
     """返回key列内容，第一位为行号，其余为key列的值       \n
     eg.[3, '名称', 'id']
     :param path: 文件路径
@@ -371,7 +393,7 @@ def _get_csv_keys(path: str,
             sign_col -= 1
             for ind, line in enumerate(lines, begin_row + 1):
                 row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
-                if row_sign == sign:
+                if row_sign != sign if deny_sign else row_sign == sign:
                     if key_cols is True:  # 获取整行
                         res_keys.append([ind] + line)
                     else:  # 只获取对应的列
