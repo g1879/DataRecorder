@@ -140,7 +140,8 @@ class OriginalRecorder(object):
                     break
 
                 except PermissionError:
-                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                    if self.show_msg:
+                        print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
                 except Exception as e:
                     if self._data:
