@@ -127,7 +127,7 @@ class OriginalRecorder(object):
         with self._lock:
             self._pause_add = True  # 写入文件前暂缓接收数据
             if self.show_msg:
-                print('开始写入文件，切勿关闭进程')
+                print(f'{self.path} 开始写入文件，切勿关闭进程')
 
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
             while True:
@@ -140,7 +140,8 @@ class OriginalRecorder(object):
                     break
 
                 except PermissionError:
-                    print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                    if self.show_msg:
+                        print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
                 except Exception as e:
                     if self._data:
@@ -160,7 +161,7 @@ class OriginalRecorder(object):
                 self._path = original_path
 
             if self.show_msg:
-                print('写入文件结束')
+                print(f'{self.path} 写入文件结束')
             self._data = []
             self._pause_add = False
 
