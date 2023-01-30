@@ -1,11 +1,11 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
 from time import sleep
-from typing import Union, Any
+from typing import Union
 
 from openpyxl import Workbook, load_workbook
 
-from .base import BaseRecorder, _ok_list
+from .base import BaseRecorder, ok_list
 
 
 class Recorder(BaseRecorder):
@@ -14,8 +14,8 @@ class Recorder(BaseRecorder):
     """
     SUPPORTS = ('any',)
 
-    def add_data(self, data: Any) -> None:
-        """添加数据，可一次添加多条数据                  \n
+    def add_data(self, data):
+        """添加数据，可一次添加多条数据
         :param data: 插入的数据，元组或列表
         :return: None
         """
@@ -35,7 +35,7 @@ class Recorder(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
-    def _record(self) -> None:
+    def _record(self):
         """记录数据"""
         if self.type == 'xlsx':
             self._to_xlsx()
@@ -46,26 +46,26 @@ class Recorder(BaseRecorder):
         else:
             self._to_txt()
 
-    def _to_xlsx(self) -> None:
+    def _to_xlsx(self):
         """记录数据到xlsx文件"""
         if Path(self.path).exists():
             wb = load_workbook(self.path)
-            ws = wb.active
+            ws = wb[self.table] if self.table else wb.active
 
         else:
             wb = Workbook(write_only=True)
-            ws = wb.create_sheet()
+            ws = wb.create_sheet(title=self.table)
             title = _get_title(self._data[0], self._before, self._after)
             if title is not None:
-                ws.append(_ok_list(title, True))
+                ws.append(ok_list(title, True))
 
         for i in self._data:
-            ws.append(_ok_list(self._data_to_list(i), True))
+            ws.append(ok_list(self._data_to_list(i), True))
 
         wb.save(self.path)
         wb.close()
 
-    def _to_csv(self) -> None:
+    def _to_csv(self):
         """记录数据到csv文件"""
         from csv import writer
         title = _get_title(self._data[0], self._before, self._after) if not Path(self.path).exists() else None
@@ -73,17 +73,17 @@ class Recorder(BaseRecorder):
         with open(self.path, 'a+', newline='', encoding=self.encoding) as f:
             csv_write = writer(f, delimiter=self.delimiter, quotechar=self.quote_char)
             if title:
-                csv_write.writerow(_ok_list(title))
+                csv_write.writerow(ok_list(title))
             for i in self._data:
-                csv_write.writerow(_ok_list(self._data_to_list(i)))
+                csv_write.writerow(ok_list(self._data_to_list(i)))
 
-    def _to_txt(self) -> None:
+    def _to_txt(self):
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [' '.join(_ok_list(self._data_to_list_or_dict(i), as_str=True)) for i in self._data]
+            all_data = [' '.join(ok_list(self._data_to_list_or_dict(i), as_str=True)) for i in self._data]
             f.write('\n'.join(all_data) + '\n')
 
-    def _to_json(self) -> None:
+    def _to_json(self):
         """记录数据到json文件"""
         from json import load, dump
         if Path(self.path).exists():
@@ -91,16 +91,16 @@ class Recorder(BaseRecorder):
                 json_data = load(f)
 
             for i in self._data:
-                json_data.append(_ok_list(self._data_to_list_or_dict(i)))
+                json_data.append(ok_list(self._data_to_list_or_dict(i)))
 
         else:
-            json_data = [_ok_list(self._data_to_list_or_dict(i)) for i in self._data]
+            json_data = [ok_list(self._data_to_list_or_dict(i)) for i in self._data]
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
 
-    def _data_to_list_or_dict(self, data: Union[list, tuple, dict]) -> Union[list, dict]:
-        """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json          \n
+    def _data_to_list_or_dict(self, data):
+        """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
         :param data: 要处理的数据
         :return: 转变成列表或字典形式的数据
         """
@@ -120,7 +120,7 @@ class Recorder(BaseRecorder):
 def _get_title(data: Union[list, dict],
                before: Union[list, dict, None] = None,
                after: Union[list, dict, None] = None) -> Union[list, None]:
-    """获取表头列表                  \n
+    """获取表头列表
     :param data: 数据列表或字典
     :param before: 数据前的列
     :param after: 数据后的列

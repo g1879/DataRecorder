@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
 from time import sleep
-from typing import Union
 
 from .base import OriginalRecorder
 
@@ -11,15 +10,11 @@ class ByteRecorder(OriginalRecorder):
     SUPPORTS = ('any',)
     __END = (0, 2)
 
-    def __init__(self,
-                 path: Union[str, Path] = None,
-                 cache_size: int = None):
+    def __init__(self, path=None, cache_size=None):
         super().__init__(path, cache_size)
 
-    def add_data(self,
-                 data: bytes,
-                 seek: int = None) -> None:
-        """添加一段二进制数据                      \n
+    def add_data(self, data, seek=None):
+        """添加一段二进制数据
         :param data: bytes类型数据
         :param seek: 在文件中的位置，None表示最后
         :return: None
@@ -37,7 +32,7 @@ class ByteRecorder(OriginalRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
-    def _record(self) -> None:
+    def _record(self):
         """记录数据到文件"""
         if not Path(self.path).exists():
             with open(self.path, 'w'):

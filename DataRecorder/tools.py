@@ -3,13 +3,12 @@ from csv import reader as csv_reader, writer as csv_writer
 
 from pathlib import Path
 from re import search, sub
-from typing import Union
 
 
-def align_csv(path: Union[str, Path],
-              encoding: str = 'utf-8',
-              delimiter: str = ',',
-              quotechar: str = '"') -> None:
+def align_csv(path,
+              encoding='utf-8',
+              delimiter=',',
+              quotechar='"'):
     """补全csv文件，使其每行列数一样多，用于pandas读取时避免出错
     :param path: 要处理的文件路径
     :param encoding: 文件编码
@@ -38,8 +37,8 @@ def align_csv(path: Union[str, Path],
         writer.writerows(lines)
 
 
-def get_usable_path(path: Union[str, Path]) -> Path:
-    """检查文件或文件夹是否有重名，并返回可以使用的路径           \n
+def get_usable_path(path):
+    """检查文件或文件夹是否有重名，并返回可以使用的路径
     :param path: 文件或文件夹路径
     :return: 可用的路径，Path对象
     """
@@ -66,8 +65,8 @@ def get_usable_path(path: Union[str, Path]) -> Path:
     return path
 
 
-def make_valid_file_name(full_name: str) -> str:
-    """获取有效的文件名                  \n
+def make_valid_file_name(full_name):
+    """获取有效的文件名
     :param full_name: 文件名
     :return: 可用的文件名
     """
@@ -93,7 +92,7 @@ def make_valid_file_name(full_name: str) -> str:
 
 
 def _get_long(txt) -> int:
-    """返回字符串中字符个数（一个汉字是2个字符）          \n
+    """返回字符串中字符个数（一个汉字是2个字符）
     :param txt: 字符串
     :return: 字符个数
     """

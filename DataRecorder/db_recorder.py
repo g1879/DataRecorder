@@ -1,8 +1,6 @@
 # -*- coding:utf-8 -*-
-from pathlib import Path
 from sqlite3 import connect
 from time import sleep
-from typing import Union, Any
 
 from .recorder import Recorder
 
@@ -10,10 +8,7 @@ from .recorder import Recorder
 class DBRecorder(Recorder):
     SUPPORTS = ('db',)
 
-    def __init__(self,
-                 path: Union[str, Path] = None,
-                 cache_size: int = None,
-                 table: str = None):
+    def __init__(self, path=None, cache_size=None, table=None):
         """
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
@@ -22,25 +17,15 @@ class DBRecorder(Recorder):
         self._conn = None
         self._cur = None
         super().__init__(path, cache_size)
-        self.table = table
+        self._table = table
 
     def __del__(self):
         """重写父类方法"""
         super().__del__()
         self._close_connection()
 
-    @property
-    def table(self) -> str:
-        """返回默认表名"""
-        return self._table
-
-    @table.setter
-    def table(self, name: str) -> None:
-        """设置默认表名"""
-        self._table = name
-
-    def set_path(self, path: Union[str, Path], file_type: str = None) -> None:
-        """重写父类方法                    \n
+    def set_path(self, path, file_type=None):
+        """重写父类方法
         :param path: 文件路径
         :param file_type: 文件类型
         :return: None
@@ -50,15 +35,8 @@ class DBRecorder(Recorder):
             self._close_connection()
         self._connect()
 
-    def set_table(self, table: str) -> None:
-        """设置默认表名
-        :param table: 表名
-        :return: None
-        """
-        self._table = table
-
-    def add_data(self, data: Any, table: str = None) -> None:
-        """添加数据                                                                            \n
+    def add_data(self, data, table=None):
+        """添加数据
         :param data: 可以是一维或二维数据，dict格式可向对应列填写数据，其余格式按顺序从左到右填入各列
         :param table: 数据要插入的表名称
         :return: None
@@ -78,23 +56,23 @@ class DBRecorder(Recorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
-    def _connect(self) -> None:
+    def _connect(self):
         """链接数据库"""
         self._conn = connect(self.path)
         self._cur = self._conn.cursor()
 
-    def _close_connection(self) -> None:
+    def _close_connection(self):
         """关闭数据库 """
         if self._conn is not None:
             self._cur.close()
             self._conn.close()
 
-    def _record(self) -> None:
+    def _record(self):
         """记录数据"""
         if self.type == 'db':
             self._to_sqlite()
 
-    def _to_sqlite(self) -> None:
+    def _to_sqlite(self):
         """保存数据到sqlite"""
         # 获取所有表名和列名
         self._cur.execute("select name from sqlite_master where type='table'")
@@ -145,7 +123,7 @@ class DBRecorder(Recorder):
 
 
 def _create_table(cursor, table_name: str, data: dict) -> tuple:
-    """创建表格                                 \n
+    """创建表格
     :param cursor: 数据库游标对象
     :param table_name: 表名称
     :param data: 要添加的数据

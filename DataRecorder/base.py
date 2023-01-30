@@ -4,7 +4,7 @@ from pathlib import Path
 from re import sub, match
 from threading import Lock
 from time import sleep
-from typing import Union, Tuple, Any
+from typing import Union
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import Cell, ReadOnlyCell
@@ -17,10 +17,8 @@ class OriginalRecorder(object):
     """记录器的基类"""
     SUPPORTS = ('any',)
 
-    def __init__(self,
-                 path: Union[str, Path] = None,
-                 cache_size: int = None) -> None:
-        """初始化                                            \n
+    def __init__(self, path=None, cache_size=None):
+        """
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
@@ -34,20 +32,19 @@ class OriginalRecorder(object):
 
         if path:
             self.set_path(path)
-        self.cache_size = cache_size if cache_size is not None else 1000
+        self._cache = cache_size if cache_size is not None else 1000
 
-    def __del__(self) -> None:
+    def __del__(self):
         """对象关闭时把剩下的数据写入文件"""
         self.record()
 
     @property
-    def cache_size(self) -> int:
+    def cache_size(self):
         """返回缓存大小"""
         return self._cache
 
-    @cache_size.setter
-    def cache_size(self, cache_size: int) -> None:
-        """设置缓存大小                   \n
+    def set_cache_size(self, cache_size):
+        """设置缓存大小
         :param cache_size: 缓存大小
         :return: None
         """
@@ -56,31 +53,12 @@ class OriginalRecorder(object):
         self._cache = cache_size
 
     @property
-    def path(self) -> str:
+    def path(self):
         """返回文件路径"""
         return self._path
 
-    @path.setter
-    def path(self, path: Union[str, Path]) -> None:
-        self.set_path(path)
-
-    @property
-    def type(self) -> str:
-        """返回文件类型"""
-        return self._type
-
-    @type.setter
-    def type(self, file_type: str) -> None:
-        """指定文件类型，无视文件后缀名"""
-        self._type = file_type
-
-    @property
-    def data(self) -> list:
-        """返回当前保存在缓存的数据"""
-        return self._data
-
-    def set_path(self, path: Union[str, Path], file_type: str = None) -> None:
-        """设置文件路径                                            \n
+    def set_path(self, path, file_type=None):
+        """设置文件路径
         :param path: 文件路径
         :param file_type: 要设置的文件类型，为空则从文件名中获取
         :return: None
@@ -102,8 +80,22 @@ class OriginalRecorder(object):
 
         self._path = str(path) if isinstance(path, Path) else path
 
-    def record(self, new_path: Union[str, Path] = None) -> Union[str, list]:
-        """记录数据，可保存到新文件                                \n
+    @property
+    def type(self):
+        """返回文件类型"""
+        return self._type
+
+    def set_type(self, file_type):
+        """指定文件类型，无视文件后缀名"""
+        self._type = file_type
+
+    @property
+    def data(self):
+        """返回当前保存在缓存的数据"""
+        return self._data
+
+    def record(self, new_path=None):
+        """记录数据，可保存到新文件
         :param new_path: 文件另存为的路径，会保存新文件
         :return: 成功返回文件路径，失败返回未保存的数据
         """
@@ -167,7 +159,7 @@ class OriginalRecorder(object):
 
         return return_data if return_data else return_path
 
-    def clear(self) -> None:
+    def clear(self):
         """清空缓存中的数据"""
         self._data = []
 
@@ -184,8 +176,8 @@ class BaseRecorder(OriginalRecorder):
     """Recorder和Filler的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
-    def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
-        """初始化                                            \n
+    def __init__(self, path=None, cache_size=None):
+        """
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
@@ -193,22 +185,35 @@ class BaseRecorder(OriginalRecorder):
         self._before = []
         self._after = []
 
-        self.encoding: str = 'utf-8'
-        self.delimiter: str = ','  # csv文件分隔符
-        self.quote_char: str = '"'  # csv文件引用符
+        self._encoding = 'utf-8'
+        self._delimiter = ','  # csv文件分隔符
+        self._quote_char = '"'  # csv文件引用符
+        self._table = None
 
     @property
-    def before(self) -> Any:
+    def before(self):
         """返回当前before内容"""
         return self._before
 
     @property
-    def after(self) -> Any:
+    def after(self):
         """返回当前after内容"""
         return self._after
 
-    def set_before(self, before: Any) -> None:
-        """设置在数据前面补充的列                              \n
+    @property
+    def table(self):
+        """返回默认表名"""
+        return self._table
+
+    def set_table(self, table):
+        """设置默认表名
+        :param table: 表名
+        :return: None
+        """
+        self._table = table
+
+    def set_before(self, before):
+        """设置在数据前面补充的列
         :param before: 列表、元组或字符串，为字符串时则补充一列
         :return: None
         """
@@ -223,8 +228,8 @@ class BaseRecorder(OriginalRecorder):
         else:
             self._before = [before]
 
-    def set_after(self, after: Any) -> None:
-        """设置在数据后面补充的列                                \n
+    def set_after(self, after):
+        """设置在数据后面补充的列
         :param after: 列表、元组或字符串，为字符串时则补充一列
         :return: None
         """
@@ -239,19 +244,55 @@ class BaseRecorder(OriginalRecorder):
         else:
             self._after = [after]
 
-    def set_head(self, head: Union[list, tuple]) -> None:
-        """设置表头。只有 csv 和 xlsx 格式支持设置表头       \n
+    def set_head(self, head):
+        """设置表头。只有 csv 和 xlsx 格式支持设置表头
         :param head: 表头，列表或元组
         :return: None
         """
         if self.type == 'xlsx':
-            _set_xlsx_head(self.path, head)
+            _set_xlsx_head(self.path, head, self.table)
 
         elif self.type == 'csv':
             _set_csv_head(self.path, head, self.encoding, self.delimiter, self.quote_char)
 
         else:
             raise TypeError('只能对xlsx和csv文件设置表头。')
+
+    @property
+    def encoding(self):
+        """返回编码格式"""
+        return self._encoding
+
+    @property
+    def delimiter(self):
+        """返回csv文件分隔符"""
+        return self._delimiter
+
+    @property
+    def quote_char(self):
+        """返回csv文件引用符"""
+        return self._quote_char
+
+    def set_encoding(self, encoding):
+        """设置编码
+        :param encoding: 编码格式
+        :return: None
+        """
+        self._encoding = encoding
+
+    def set_delimiter(self, delimiter):
+        """设置csv文件分隔符
+        :param delimiter: 分隔符
+        :return: None
+        """
+        self._delimiter = delimiter
+
+    def set_quote_char(self, quote_char):
+        """设置csv文件引用符
+        :param quote_char: 引用符
+        :return: None
+        """
+        self._quote_char = quote_char
 
     @abstractmethod
     def add_data(self, data):
@@ -261,8 +302,8 @@ class BaseRecorder(OriginalRecorder):
     def _record(self):
         pass
 
-    def _data_to_list(self, data: Union[list, tuple, dict]) -> list:
-        """将传入的数据转换为列表形式，添加前后列数据                \n
+    def _data_to_list(self, data):
+        """将传入的数据转换为列表形式，添加前后列数据
         :param data: 要处理的数据
         :return: 转变成列表方式的数据
         """
@@ -290,7 +331,7 @@ def _set_csv_head(file_path: str,
                   encoding: str = 'utf-8',
                   delimiter: str = ',',
                   quote_char: str = '"') -> None:
-    """设置csv文件的表头              \n
+    """设置csv文件的表头
     :param file_path: 文件路径
     :param head: 表头列表或元组
     :param encoding: 编码
@@ -305,7 +346,7 @@ def _set_csv_head(file_path: str,
 
         with open(file_path, 'w', newline='', encoding=encoding) as f:
             csv_write = writer(f, delimiter=delimiter, quotechar=quote_char)
-            csv_write.writerow(_ok_list(head))
+            csv_write.writerow(ok_list(head))
 
         with open(file_path, 'a+', newline='', encoding=encoding) as f:
             f.write(f'{content}')
@@ -313,33 +354,33 @@ def _set_csv_head(file_path: str,
     else:
         with open(file_path, 'w', newline='', encoding=encoding) as f:
             csv_write = writer(f, delimiter=delimiter, quotechar=quote_char)
-            csv_write.writerow(_ok_list(head))
+            csv_write.writerow(ok_list(head))
 
 
-def _set_xlsx_head(file_path: str, head: Union[list, tuple]) -> None:
-    """设置xlsx文件的表头            \n
+def _set_xlsx_head(file_path: str, head: Union[list, tuple], table: str) -> None:
+    """设置xlsx文件的表头
     :param file_path: 文件路径
     :param head: 表头列表或元组
+    :param table: 工作表名称
     :return: None
     """
     wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
-    ws = wb.active
+    ws = wb[table] if table else wb.active
 
     for key, i in enumerate(head, 1):
-        ws.cell(1, key).value = _process_content(i, True)
+        ws.cell(1, key).value = process_content(i, True)
 
     wb.save(file_path)
     wb.close()
 
 
-def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
-                 data_col: int = None) -> Tuple[Union[int, None], int]:
-    """添加数据，每次添加一行数据，可指定坐标、列号或行号                                           \n
+def parse_coord(coord=None, data_col=None):
+    """添加数据，每次添加一行数据，可指定坐标、列号或行号
     coord只输入数字（行号）时，列号为self.data_col值，如 3；
     输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
     输入 'newline' 时，表示新增一行，列号为self.data_col值；
     输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]；
-    输入的行号可以是负数（列号不可以），代表从下往上数，-1是倒数第一行，如'a-3'、(-3, 3)                                            \n
+    输入的行号可以是负数（列号不可以），代表从下往上数，-1是倒数第一行，如'a-3'、(-3, 3)
     :param coord: 坐标、列号、行号
     :param data_col: 列号，用于只传入行号的情况
     :return: 坐标tuple：(行, 列)，或(None, 列)
@@ -404,9 +445,10 @@ def _parse_coord(coord: Union[int, str, list, tuple, None] = None,
     return return_coord
 
 
-def _process_content(content: Any, excel: bool = False) -> Union[int, str, float, None]:
-    """处理单个单元格要写入的数据                  \n
+def process_content(content, excel=False):
+    """处理单个单元格要写入的数据
     :param content: 未处理的数据内容
+    :param excel: 是否为excel文件
     :return: 处理后的数据
     """
     if isinstance(content, (int, str, float, type(None))):
@@ -422,8 +464,8 @@ def _process_content(content: Any, excel: bool = False) -> Union[int, str, float
     return data
 
 
-def _ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = False) -> list:
-    """处理列表中数据使其符合保存规范             \n
+def ok_list(data_list, excel=False, as_str=False):
+    """处理列表中数据使其符合保存规范
     :param data_list: 数据列表
     :param excel: 是否保存在excel
     :param as_str: 内容是否转为字符串
@@ -433,11 +475,11 @@ def _ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = F
         data_list = data_list.values()
     if as_str:
         data_list = [str(i) for i in data_list]
-    return [_process_content(i, excel) for i in data_list]
+    return [process_content(i, excel) for i in data_list]
 
 
-def _get_usable_coord(coord: Union[tuple, list], max_row: int, max_col: int) -> Tuple[int, int]:
-    """返回真正写入文件的坐标                                              \n
+def get_usable_coord(coord, max_row, max_col):
+    """返回真正写入文件的坐标
     :param coord: 已初步格式化的坐标，如(1, 2)、(None, 3)、(-3, -2)
     :param max_row: 文件最大行
     :param max_col: 文件最大列
