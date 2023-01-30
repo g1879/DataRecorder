@@ -43,6 +43,11 @@ class OriginalRecorder(object):
         """返回缓存大小"""
         return self._cache
 
+    @cache_size.setter
+    def cache_size(self, size):
+        """设置缓存大小"""
+        self.set_cache_size(size)
+
     def set_cache_size(self, cache_size):
         """设置缓存大小
         :param cache_size: 缓存大小
@@ -56,6 +61,11 @@ class OriginalRecorder(object):
     def path(self):
         """返回文件路径"""
         return self._path
+
+    @path.setter
+    def path(self, file_path):
+        """设置文件路径"""
+        self.set_path(file_path)
 
     def set_path(self, path, file_type=None):
         """设置文件路径
@@ -84,6 +94,11 @@ class OriginalRecorder(object):
     def type(self):
         """返回文件类型"""
         return self._type
+
+    @type.setter
+    def type(self, file_type):
+        """设置文件类型"""
+        self.set_type(file_type)
 
     def set_type(self, file_type):
         """指定文件类型，无视文件后缀名"""
@@ -273,6 +288,21 @@ class BaseRecorder(OriginalRecorder):
         """返回csv文件引用符"""
         return self._quote_char
 
+    @encoding.setter
+    def encoding(self, encoding):
+        """设置编码格式"""
+        self.set_encoding(encoding)
+
+    @delimiter.setter
+    def delimiter(self, delimiter):
+        """设置csv文件分隔符"""
+        self.set_delimiter(delimiter)
+
+    @quote_char.setter
+    def quote_char(self, quote_char):
+        """设置csv文件引用符"""
+        self.set_quote_char(quote_char)
+
     def set_encoding(self, encoding):
         """设置编码
         :param encoding: 编码格式
@@ -365,7 +395,10 @@ def _set_xlsx_head(file_path: str, head: Union[list, tuple], table: str) -> None
     :return: None
     """
     wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
-    ws = wb[table] if table else wb.active
+    if table:
+        ws = wb[table] if table in [i.title for i in wb.worksheets] else wb.create_sheet(title=table)
+    else:
+        ws = wb.active
 
     for key, i in enumerate(head, 1):
         ws.cell(1, key).value = process_content(i, True)

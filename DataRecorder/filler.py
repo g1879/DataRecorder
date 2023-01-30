@@ -230,7 +230,10 @@ class Filler(BaseRecorder):
     def _to_xlsx(self):
         """填写数据到xlsx文件"""
         wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
-        ws = wb[self.table] if self.table else wb.active
+        if self.table:
+            ws = wb[self.table] if self.table in [i.title for i in wb.worksheets] else wb.create_sheet(title=self.table)
+        else:
+            ws = wb.active
         max_col = ws.max_column
         empty = ws.max_column == ws.max_row == 1 and ws[1][0].value is None
 
@@ -325,6 +328,8 @@ def _get_xlsx_keys(path: str,
     :return: 关键字组成的列表
     """
     wb = load_workbook(path, data_only=True, read_only=True)
+    if table and table not in [i.title for i in wb.worksheets]:
+        raise RuntimeError(f'xlsx文件未包含此工作表：{table}')
     ws = wb[table] if table else wb.active
 
     if ws.max_column is None:  # 遇到过read_only时无法获取列数的文件

@@ -50,7 +50,11 @@ class Recorder(BaseRecorder):
         """记录数据到xlsx文件"""
         if Path(self.path).exists():
             wb = load_workbook(self.path)
-            ws = wb[self.table] if self.table else wb.active
+            if self.table:
+                ws = wb[self.table] if self.table in [i.title for i in wb.worksheets] else wb.create_sheet(
+                    title=self.table)
+            else:
+                ws = wb.active
 
         else:
             wb = Workbook(write_only=True)
