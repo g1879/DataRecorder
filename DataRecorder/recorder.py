@@ -6,6 +6,7 @@ from typing import Union
 from openpyxl import Workbook, load_workbook
 
 from .base import BaseRecorder, ok_list
+from .tools import CellStyle
 
 
 class Recorder(BaseRecorder):
@@ -13,6 +14,39 @@ class Recorder(BaseRecorder):
     退出时能自动记录数据（xlsx格式除外），避免因异常丢失。
     """
     SUPPORTS = ('any',)
+
+    def __init__(self, path=None, cache_size=None):
+        super().__init__(path=path, cache_size=cache_size)
+        self._follow_styles = False
+        self._row_styles = None
+        self._row_styles_len = None
+
+        self._col_height = None
+        self._style = None
+
+    def set_follow_styles(self, on_off=True):
+        """设置是否跟随最后一行的style，只有xlsx格式有效
+        :param on_off: True或False
+        :return: None
+        """
+        self._follow_styles = on_off
+        if not on_off:
+            self._row_styles = None
+            self._row_styles_len = None
+
+    def set_col_height(self, height):
+        """设置行高，只有xlsx格式有效
+        :param height: 行高
+        :return: None
+        """
+        self._col_height = height
+
+    def set_style(self, style):
+        """设置样式，只有xlsx格式有效
+        :param style: CellStyle对象
+        :return: None
+        """
+        self._style = style
 
     def add_data(self, data):
         """添加数据，可一次添加多条数据
@@ -35,6 +69,15 @@ class Recorder(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
+    def set_path(self, path, file_type=None):
+        """设置文件路径
+        :param path: 文件路径
+        :param file_type: 要设置的文件类型，为空则从文件名中获取
+        :return: None
+        """
+        super().set_path(path=path, file_type=file_type)
+        self._row_styles = None
+
     def _record(self):
         """记录数据"""
         if self.type == 'xlsx':
@@ -56,15 +99,41 @@ class Recorder(BaseRecorder):
             else:
                 ws = wb.active
 
+            if self._follow_styles and self._row_styles is None:
+                row_num = ws.max_row
+                self._row_styles = [CellStyle(i) for i in ws[row_num]]
+                self._row_styles_len = len(self._row_styles)
+                self._col_height = ws.row_dimensions[row_num].height
+
         else:
-            wb = Workbook(write_only=True)
-            ws = wb.create_sheet(title=self.table)
+            if self._col_height or self._row_styles:
+                wb = Workbook(write_only=False)
+                ws = wb.active
+                if self.table:
+                    ws.title = self.table
+            else:
+                wb = Workbook(write_only=True)
+                ws = wb.create_sheet(title=self.table)
+
             title = _get_title(self._data[0], self._before, self._after)
             if title is not None:
                 ws.append(ok_list(title, True))
 
         for i in self._data:
-            ws.append(ok_list(self._data_to_list(i), True))
+            data = ok_list(self._data_to_list(i), True)
+            ws.append(data)
+
+            if self._col_height is not None:
+                ws.row_dimensions[ws.max_row].height = self._col_height
+
+            if self._row_styles:
+                groups = zip(ws[ws.max_row], self._row_styles)
+                for g in groups:
+                    g[1].to_cell(g[0])
+
+            elif self._style:
+                for c in ws[ws.max_row]:
+                    self._style.to_cell(c)
 
         wb.save(self.path)
         wb.close()
