@@ -263,6 +263,10 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 此属性返回缓存的大小，表示记录的条数。可赋值设置。
 
+## `table`
+
+此属性返回当前处理的数据表，处理 xlsx 文件时才生效。
+
 ## `key_cols`
 
 此属性返回作为关键字的列或列的集合。列号可以是数字或字母。如`(1, 'b')`。可赋值设置。
@@ -376,6 +380,16 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 - `data_col`：要填入数据的第一列，从1开始
 - `sign`：按这个值筛选需要的行纳入`keys`
 - `deny_sign`：是否反向匹配`sign`，即筛选`sign_col列`值不是`sign`的行
+
+返回：`None`
+
+## `set_table()`
+
+此方法用于处理 xlsx 文件时指定数据表。
+
+参数：
+
+- `table`：数据表名称
 
 返回：`None`
 
