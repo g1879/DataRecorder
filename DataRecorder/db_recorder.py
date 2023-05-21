@@ -3,6 +3,7 @@ from sqlite3 import connect
 from time import sleep
 
 from .recorder import Recorder
+from .setter import DBSetter
 
 
 class DBRecorder(Recorder):
@@ -19,21 +20,17 @@ class DBRecorder(Recorder):
         super().__init__(path, cache_size)
         self._table = table
 
+    @property
+    def set(self):
+        """返回用于设置属性的对象"""
+        if self._setter is None:
+            self._setter = DBSetter(self)
+        return self._setter
+
     def __del__(self):
         """重写父类方法"""
         super().__del__()
         self._close_connection()
-
-    def set_path(self, path, file_type=None):
-        """重写父类方法
-        :param path: 文件路径
-        :param file_type: 文件类型
-        :return: None
-        """
-        super().set_path(path, file_type)
-        if self._conn is not None:
-            self._close_connection()
-        self._connect()
 
     def add_data(self, data, table=None):
         """添加数据

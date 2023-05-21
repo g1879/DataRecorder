@@ -2,7 +2,8 @@
 from typing import Union, Any
 
 from .base import BaseRecorder
-from .tools import CellStyle
+from .cell_style import CellStyle
+from .setter import RecorderSetter
 
 
 class Recorder(BaseRecorder):
@@ -12,11 +13,8 @@ class Recorder(BaseRecorder):
     _row_styles_len: Union[int, None] = ...
     _style: Union[CellStyle, None] = ...
 
-    def set_follow_styles(self, on_off: bool = True) -> None: ...
-
-    def set_col_height(self, height: float) -> None: ...
-
-    def set_style(self, style: CellStyle) -> None: ...
+    @property
+    def set(self) -> RecorderSetter: ...
 
     def add_data(self, data: Any) -> None: ...
 
