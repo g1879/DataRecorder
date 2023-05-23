@@ -89,6 +89,15 @@ class BaseSetter(OriginalSetter):
         else:
             self._recorder._after = [after]
 
+    def encoding(self, encoding):
+        """设置编码
+        :param encoding: 编码格式
+        :return: None
+        """
+        self._recorder._encoding = encoding
+
+
+class SheetLikeSetter(BaseSetter):
     def head(self, head):
         """设置表头。只有 csv 和 xlsx 格式支持设置表头
         :param head: 表头，列表或元组
@@ -104,15 +113,22 @@ class BaseSetter(OriginalSetter):
         else:
             raise TypeError('只能对xlsx和csv文件设置表头。')
 
-    def encoding(self, encoding):
-        """设置编码
-        :param encoding: 编码格式
+    def delimiter(self, delimiter):
+        """设置csv文件分隔符
+        :param delimiter: 分隔符
         :return: None
         """
-        self._recorder._encoding = encoding
+        self._recorder._delimiter = delimiter
+
+    def quote_char(self, quote_char):
+        """设置csv文件引用符
+        :param quote_char: 引用符
+        :return: None
+        """
+        self._recorder._quote_char = quote_char
 
 
-class FillerSetter(BaseSetter):
+class FillerSetter(SheetLikeSetter):
     def sign(self, value):
         """设置sign值
         :param value: 筛选条件文本
@@ -205,22 +221,8 @@ class FillerSetter(BaseSetter):
         """
         self._recorder._link_font = style
 
-    def delimiter(self, delimiter):
-        """设置csv文件分隔符
-        :param delimiter: 分隔符
-        :return: None
-        """
-        self._recorder._delimiter = delimiter
 
-    def quote_char(self, quote_char):
-        """设置csv文件引用符
-        :param quote_char: 引用符
-        :return: None
-        """
-        self._recorder._quote_char = quote_char
-
-
-class RecorderSetter(BaseSetter):
+class RecorderSetter(SheetLikeSetter):
     def follow_styles(self, on_off=True):
         """设置是否跟随最后一行的style，只有xlsx格式有效
         :param on_off: True或False
@@ -253,20 +255,6 @@ class RecorderSetter(BaseSetter):
         """
         super().path(path=path, file_type=file_type)
         self._recorder._row_styles = None
-
-    def delimiter(self, delimiter):
-        """设置csv文件分隔符
-        :param delimiter: 分隔符
-        :return: None
-        """
-        self._recorder._delimiter = delimiter
-
-    def quote_char(self, quote_char):
-        """设置csv文件引用符
-        :param quote_char: 引用符
-        :return: None
-        """
-        self._recorder._quote_char = quote_char
 
 
 class DBSetter(BaseSetter):
@@ -316,11 +304,18 @@ def set_xlsx_head(file_path, head, table):
     :param table: 工作表名称
     :return: None
     """
-    wb = load_workbook(file_path) if Path(file_path).exists() else Workbook()
-    if table:
-        ws = wb[table] if table in [i.title for i in wb.worksheets] else wb.create_sheet(title=table)
+    if Path(file_path).exists():
+        wb = load_workbook(file_path)
+        if table:
+            ws = wb[table] if table in [i.title for i in wb.worksheets] else wb.create_sheet(title=table)
+        else:
+            ws = wb.active
+
     else:
+        wb = Workbook()
         ws = wb.active
+        if table:
+            ws.title = table
 
     for key, i in enumerate(head, 1):
         ws.cell(1, key).value = process_content(i, True)

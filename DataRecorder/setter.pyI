@@ -2,13 +2,14 @@
 from pathlib import Path
 from typing import Union, Any
 
-from DataRecorder.base import OriginalRecorder
-from DataRecorder.cell_style import CellStyle
+from .filler import Filler
+from .recorder import Recorder
+from .base import OriginalRecorder, BaseRecorder
+from .cell_style import CellStyle
 
 
 class OriginalSetter(object):
-    def __init__(self, recorder):
-        self._recorder = OriginalRecorder
+    _recorder = OriginalRecorder
 
     def cache_size(self, size: int) -> None: ...
 
@@ -18,18 +19,30 @@ class OriginalSetter(object):
 
 
 class BaseSetter(OriginalSetter):
+    _recorder = BaseRecorder
+
     def table(self, name: str) -> None: ...
 
     def before(self, before: Any) -> None: ...
 
     def after(self, after: Any) -> None: ...
 
-    def head(self, head: Union[list, tuple]) -> None: ...
-
     def encoding(self, encoding: str) -> None: ...
 
 
-class FillerSetter(BaseSetter):
+class SheetLikeSetter(BaseSetter):
+    _recorder: Union[Filler, Recorder] = ...
+
+    def head(self, head: Union[list, tuple]) -> None: ...
+
+    def delimiter(self, delimiter: str) -> None: ...
+
+    def quote_char(self, quote_char: str) -> None: ...
+
+
+class FillerSetter(SheetLikeSetter):
+    _recorder: Filler = ...
+
     def sign(self, value: Any) -> None: ...
 
     def deny_sign(self, on_off: bool = True) -> None: ...
@@ -48,12 +61,10 @@ class FillerSetter(BaseSetter):
 
     def link_style(self, style: CellStyle) -> None: ...
 
-    def delimiter(self, delimiter: str) -> None: ...
 
-    def quote_char(self, quote_char: str) -> None: ...
+class RecorderSetter(SheetLikeSetter):
+    _recorder: Recorder = ...
 
-
-class RecorderSetter(BaseSetter):
     def follow_styles(self, on_off: bool = True) -> None: ...
 
     def col_height(self, height: float) -> None: ...
@@ -61,10 +72,6 @@ class RecorderSetter(BaseSetter):
     def style(self, style: CellStyle) -> None: ...
 
     def path(self, path: Union[str, Path], file_type: str = None) -> None: ...
-
-    def delimiter(self, delimiter: str) -> None: ...
-
-    def quote_char(self, quote_char: str) -> None: ...
 
 
 class DBSetter(BaseSetter):
