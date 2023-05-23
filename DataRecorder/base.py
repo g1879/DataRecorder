@@ -27,7 +27,7 @@ class OriginalRecorder(object):
         self._setter = None
 
         if path:
-            self.set_path(path)
+            self.set.path(path)
         self._cache = cache_size if cache_size is not None else 1000
 
     def __del__(self):
@@ -102,13 +102,13 @@ class OriginalRecorder(object):
                     if self.show_msg:
                         print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
-                except Exception as e:
+                except Exception:
                     if self._data:
                         if self.show_msg:
-                            print(f'\n{self._data}\n\n注意！！以上数据未保存')
+                            print(
+                                f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n请显式调用record()保存数据。'
+                                f'\n{"=" * 30}')
                         return_data = self._data.copy()
-                    if 'Python is likely shutting down' not in str(e):
-                        raise
                     break
 
                 finally:
@@ -153,8 +153,6 @@ class BaseRecorder(OriginalRecorder):
         self._after = []
 
         self._encoding = 'utf-8'
-        self._delimiter = ','  # csv文件分隔符
-        self._quote_char = '"'  # csv文件引用符
         self._table = None
 
     @property
@@ -183,16 +181,6 @@ class BaseRecorder(OriginalRecorder):
     def encoding(self):
         """返回编码格式"""
         return self._encoding
-
-    @property
-    def delimiter(self):
-        """返回csv文件分隔符"""
-        return self._delimiter
-
-    @property
-    def quote_char(self):
-        """返回csv文件引用符"""
-        return self._quote_char
 
     @abstractmethod
     def add_data(self, data):

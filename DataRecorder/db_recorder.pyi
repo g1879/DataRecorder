@@ -2,17 +2,18 @@
 from pathlib import Path
 from typing import Union, Any
 
-from .recorder import Recorder
+from .base import BaseRecorder
 from .setter import DBSetter
 
 
-class DBRecorder(Recorder):
+class DBRecorder(BaseRecorder):
     def __init__(self,
                  path: Union[str, Path] = None,
                  cache_size: int = None,
                  table: str = None):
         self._conn = ...
         self._cur = ...
+        self._set: DBSetter = ...
 
     @property
     def set(self) -> DBSetter: ...

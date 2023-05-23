@@ -2,6 +2,8 @@
 from pathlib import Path
 from typing import Union, Tuple, Any
 
+from .base import BaseRecorder
+
 
 def align_csv(path: Union[str, Path], encoding: str = 'utf-8', delimiter: str = ',', quotechar: str = '"') -> None: ...
 
@@ -23,3 +25,6 @@ def ok_list(data_list: Union[list, dict], excel: bool = False, as_str: bool = Fa
 
 
 def get_usable_coord(coord: Union[tuple, list], max_row: int, max_col: int) -> Tuple[int, int]: ...
+
+
+def data_to_list_or_dict(recorder: BaseRecorder, data: Union[list, tuple, dict]) -> Union[list, dict]: ...

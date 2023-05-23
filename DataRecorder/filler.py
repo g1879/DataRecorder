@@ -6,7 +6,6 @@ from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font
-from openpyxl.utils import column_index_from_string
 
 from .base import BaseRecorder
 from .setter import FillerSetter
@@ -29,23 +28,18 @@ class Filler(BaseRecorder):
         :param deny_sign: 是否反向匹配sign，即筛选sign_col列值不是sign的行
         """
         super().__init__(None, cache_size)
-        super().set_path(path)
+        self._delimiter = ','  # csv文件分隔符
+        self._quote_char = '"'  # csv文件引用符
         self._key_cols = None
         self._begin_row = None
         self._sign_col = None
         self._data_col = None
-        self.set_key_cols(key_cols)
-        self.set_begin_row(begin_row)
-        self.set_sign_col(sign_col)
-        if data_col:
-            self.set_data_col(data_col)
-        elif sign_col:
-            self.set_data_col(sign_col)
-        else:
-            self.set_data_col(1)
+        self._sign = None
+        self._deny_sign = False
+        if not data_col:
+            data_col = sign_col if sign_col else 1
+        self.set.path(path, key_cols, begin_row, sign_col, data_col, sign, deny_sign)
         self._link_font = Font(color="0000FF")
-        self._sign = sign
-        self._deny_sign = deny_sign
 
     @property
     def sign(self):
@@ -98,6 +92,16 @@ class Filler(BaseRecorder):
         if self._setter is None:
             self._setter = FillerSetter(self)
         return self._setter
+
+    @property
+    def delimiter(self):
+        """返回csv文件分隔符"""
+        return self._delimiter
+
+    @property
+    def quote_char(self):
+        """返回csv文件引用符"""
+        return self._quote_char
 
     def add_data(self, data, coord='newline'):
         """添加数据，每次添加一行数据，可指定坐标、列号或行号

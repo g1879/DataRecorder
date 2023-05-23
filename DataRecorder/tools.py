@@ -1,6 +1,5 @@
 # -*- coding:utf-8 -*-
 from csv import reader as csv_reader, writer as csv_writer
-
 from pathlib import Path
 from re import search, sub, match
 
@@ -225,3 +224,22 @@ def get_usable_coord(coord, max_row, max_col):
             raise ValueError(f'行号不能小于1。当前：{row}')
 
     return row, col
+
+
+def data_to_list_or_dict(recorder, data):
+    """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
+    :param recorder: BaseRecorder对象
+    :param data: 要处理的数据
+    :return: 转变成列表或字典形式的数据
+    """
+    if isinstance(data, (list, tuple)):
+        return recorder._data_to_list(data)
+
+    elif isinstance(data, dict):
+        if isinstance(recorder.before, dict):
+            data = {**recorder.before, **data}
+
+        if isinstance(recorder.after, dict):
+            data = {**data, **recorder.after}
+
+        return data

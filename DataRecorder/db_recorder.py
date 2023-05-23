@@ -2,11 +2,12 @@
 from sqlite3 import connect
 from time import sleep
 
-from .recorder import Recorder
+from .base import BaseRecorder
 from .setter import DBSetter
+from .tools import data_to_list_or_dict
 
 
-class DBRecorder(Recorder):
+class DBRecorder(BaseRecorder):
     SUPPORTS = ('db',)
 
     def __init__(self, path=None, cache_size=None, table=None):
@@ -92,7 +93,7 @@ class DBRecorder(Recorder):
 
             for d in now_data:
                 if isinstance(d, dict):
-                    d = self._data_to_list_or_dict(d)
+                    d = data_to_list_or_dict(self, d)
                     keys = d.keys()
 
                     for key in keys:  # 检查是否要新增列

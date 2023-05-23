@@ -8,7 +8,7 @@ from openpyxl import Workbook, load_workbook
 from .base import BaseRecorder
 from .cell_style import CellStyle
 from .setter import RecorderSetter
-from .tools import ok_list
+from .tools import ok_list, data_to_list_or_dict
 
 
 class Recorder(BaseRecorder):
@@ -23,6 +23,9 @@ class Recorder(BaseRecorder):
         self._row_styles = None
         self._row_styles_len = None
 
+        self._delimiter = ','  # csv文件分隔符
+        self._quote_char = '"'  # csv文件引用符
+
         self._col_height = None
         self._style = None
 
@@ -32,6 +35,16 @@ class Recorder(BaseRecorder):
         if self._setter is None:
             self._setter = RecorderSetter(self)
         return self._setter
+
+    @property
+    def delimiter(self):
+        """返回csv文件分隔符"""
+        return self._delimiter
+
+    @property
+    def quote_char(self):
+        """返回csv文件引用符"""
+        return self._quote_char
 
     def add_data(self, data):
         """添加数据，可一次添加多条数据
@@ -129,7 +142,7 @@ class Recorder(BaseRecorder):
     def _to_txt(self):
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [' '.join(ok_list(self._data_to_list_or_dict(i), as_str=True)) for i in self._data]
+            all_data = [' '.join(ok_list(data_to_list_or_dict(self, i), as_str=True)) for i in self._data]
             f.write('\n'.join(all_data) + '\n')
 
     def _to_json(self):
@@ -140,30 +153,13 @@ class Recorder(BaseRecorder):
                 json_data = load(f)
 
             for i in self._data:
-                json_data.append(ok_list(self._data_to_list_or_dict(i)))
+                json_data.append(ok_list(data_to_list_or_dict(self, i)))
 
         else:
-            json_data = [ok_list(self._data_to_list_or_dict(i)) for i in self._data]
+            json_data = [ok_list(data_to_list_or_dict(self, i)) for i in self._data]
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
-
-    def _data_to_list_or_dict(self, data):
-        """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
-        :param data: 要处理的数据
-        :return: 转变成列表或字典形式的数据
-        """
-        if isinstance(data, (list, tuple)):
-            return self._data_to_list(data)
-
-        elif isinstance(data, dict):
-            if isinstance(self.before, dict):
-                data = {**self.before, **data}
-
-            if isinstance(self.after, dict):
-                data = {**data, **self.after}
-
-            return data
 
 
 def _get_title(data: Union[list, dict],

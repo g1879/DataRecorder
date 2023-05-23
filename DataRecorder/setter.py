@@ -111,20 +111,6 @@ class BaseSetter(OriginalSetter):
         """
         self._recorder._encoding = encoding
 
-    def delimiter(self, delimiter):
-        """设置csv文件分隔符
-        :param delimiter: 分隔符
-        :return: None
-        """
-        self._recorder._delimiter = delimiter
-
-    def quote_char(self, quote_char):
-        """设置csv文件引用符
-        :param quote_char: 引用符
-        :return: None
-        """
-        self._recorder._quote_char = quote_char
-
 
 class FillerSetter(BaseSetter):
     def sign(self, value):
@@ -219,6 +205,20 @@ class FillerSetter(BaseSetter):
         """
         self._recorder._link_font = style
 
+    def delimiter(self, delimiter):
+        """设置csv文件分隔符
+        :param delimiter: 分隔符
+        :return: None
+        """
+        self._recorder._delimiter = delimiter
+
+    def quote_char(self, quote_char):
+        """设置csv文件引用符
+        :param quote_char: 引用符
+        :return: None
+        """
+        self._recorder._quote_char = quote_char
+
 
 class RecorderSetter(BaseSetter):
     def follow_styles(self, on_off=True):
@@ -253,6 +253,20 @@ class RecorderSetter(BaseSetter):
         """
         super().path(path=path, file_type=file_type)
         self._recorder._row_styles = None
+
+    def delimiter(self, delimiter):
+        """设置csv文件分隔符
+        :param delimiter: 分隔符
+        :return: None
+        """
+        self._recorder._delimiter = delimiter
+
+    def quote_char(self, quote_char):
+        """设置csv文件引用符
+        :param quote_char: 引用符
+        :return: None
+        """
+        self._recorder._quote_char = quote_char
 
 
 class DBSetter(BaseSetter):
