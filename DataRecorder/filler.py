@@ -13,11 +13,9 @@ from .tools import parse_coord, get_usable_coord, process_content
 
 
 class Filler(BaseRecorder):
-    """Filler类用于根据现有文件中的关键字向文件填充数据"""
-
-    def __init__(self, path, cache_size=None, key_cols=True, begin_row=2,
+    def __init__(self, path=None, cache_size=None, key_cols=True, begin_row=2,
                  sign_col=True, data_col=None, sign=None, deny_sign=False) -> None:
-        """
+        """专门用于处理表格文件的工具。
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行
@@ -76,8 +74,8 @@ class Filler(BaseRecorder):
         """返回一个列表，由未执行的行数据组成。每行的格式为第一位为行号，其余为 key 列的值。
         eg.[3, '张三', 20]
         """
-        if not Path(self.path).exists():
-            return []
+        if not self.path or not Path(self.path).exists():
+            raise FileNotFoundError('未指定文件或文件不存在。')
 
         if self.type == 'csv':
             return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
@@ -259,8 +257,11 @@ def _get_xlsx_keys(path: str,
         ws = wb[table] if table else wb.active
 
     rows = ws.rows
-    for _ in range(begin_row - 1):
-        next(rows)
+    try:
+        for _ in range(begin_row - 1):
+            next(rows)
+    except StopIteration:
+        return []
 
     if sign_col is True or sign_col > ws.max_column:  # 获取所有行
         if key_cols is True:  # 获取整行

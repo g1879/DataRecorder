@@ -27,6 +27,9 @@ class OriginalSetter(object):
         :param file_type: 要设置的文件类型，为空则从文件名中获取
         :return: None
         """
+        if self._recorder._path:
+            self._recorder.record()  # 更换文件前自动记录剩余数据
+
         if file_type is not None and isinstance(file_type, str):
             self._recorder._type = file_type
         elif isinstance(path, str):
@@ -38,9 +41,6 @@ class OriginalSetter(object):
 
         if self._recorder._type not in self._recorder.SUPPORTS and 'any' not in self._recorder.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self._recorder.SUPPORTS)}格式文件。')
-
-        if self._recorder._path:
-            self._recorder.record()  # 更换文件前自动记录剩余数据
 
         self._recorder._path = str(path) if isinstance(path, Path) else path
 
@@ -103,6 +103,9 @@ class SheetLikeSetter(BaseSetter):
         :param head: 表头，列表或元组
         :return: None
         """
+        if not self._recorder.path or not Path(self._recorder.path).exists():
+            raise FileNotFoundError('未指定文件或文件不存在。')
+
         if self._recorder.type == 'xlsx':
             set_xlsx_head(self._recorder.path, head, self._recorder.table)
 
@@ -193,7 +196,7 @@ class FillerSetter(SheetLikeSetter):
             raise TypeError('row值只能是int，且必须大于0')
         self._recorder._begin_row = row
 
-    def path(self, path, key_cols=None, begin_row=None, sign_col=None,
+    def path(self, path=None, key_cols=None, begin_row=None, sign_col=None,
              data_col=None, sign=None, deny_sign=None):
         """设置文件路径
         :param path: 保存的文件路径
@@ -204,9 +207,8 @@ class FillerSetter(SheetLikeSetter):
         :param sign: 按这个值判断是否已填数据
         :param deny_sign: 是否反向匹配sign，即筛选指不是sign的行
         """
-        if not path or not Path(path).exists():
-            raise FileNotFoundError('文件不存在')
-        super().path(path)
+        if path:
+            super().path(path)
         self._recorder.set.key_cols(key_cols or self._recorder.key_cols)
         self._recorder.set.begin_row(begin_row or self._recorder.begin_row)
         self._recorder.set.sign_col(sign_col or self._recorder.sign_col)

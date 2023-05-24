@@ -11,7 +11,7 @@ from .setter import FillerSetter
 class Filler(BaseRecorder):
 
     def __init__(self,
-                 path: Union[str, Path],
+                 path: Union[str, Path] = None,
                  cache_size: int = None,
                  key_cols: Union[str, int, list, tuple, bool] = True,
                  begin_row: int = 2,

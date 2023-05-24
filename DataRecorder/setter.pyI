@@ -2,10 +2,10 @@
 from pathlib import Path
 from typing import Union, Any
 
-from .filler import Filler
-from .recorder import Recorder
 from .base import OriginalRecorder, BaseRecorder
 from .cell_style import CellStyle
+from .filler import Filler
+from .recorder import Recorder
 
 
 class OriginalSetter(object):
@@ -43,6 +43,8 @@ class SheetLikeSetter(BaseSetter):
 class FillerSetter(SheetLikeSetter):
     _recorder: Filler = ...
 
+    def __init__(self, recorder): ...
+
     def sign(self, value: Any) -> None: ...
 
     def deny_sign(self, on_off: bool = True) -> None: ...
@@ -55,7 +57,7 @@ class FillerSetter(SheetLikeSetter):
 
     def begin_row(self, row: int) -> None: ...
 
-    def path(self, path: Union[str, Path], key_cols: Union[str, int, list, tuple] = None,
+    def path(self, path: Union[str, Path] = None, key_cols: Union[str, int, list, tuple] = None,
              begin_row: int = None, sign_col: Union[str, int] = None,
              data_col: int = None, sign: Union[int, float, str] = None, deny_sign: bool = None) -> None: ...
 
@@ -64,6 +66,8 @@ class FillerSetter(SheetLikeSetter):
 
 class RecorderSetter(SheetLikeSetter):
     _recorder: Recorder = ...
+
+    def __init__(self, recorder): ...
 
     def follow_styles(self, on_off: bool = True) -> None: ...
 
