@@ -12,12 +12,13 @@ from .tools import ok_list, data_to_list_or_dict
 
 
 class Recorder(BaseRecorder):
-    """用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。
-    退出时能自动记录数据（xlsx格式除外），避免因异常丢失。
-    """
-    SUPPORTS = ('any',)
+    SUPPORTS = ('csv', 'xlsx', 'json', 'txt')
 
     def __init__(self, path=None, cache_size=None):
+        """用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销
+        :param path: 保存的文件路径
+        :param cache_size: 每接收多少条记录写入文件，0为不自动写入
+        """
         super().__init__(path=path, cache_size=cache_size)
         self._follow_styles = False
         self._row_styles = None
@@ -69,13 +70,13 @@ class Recorder(BaseRecorder):
 
     def _record(self):
         """记录数据"""
-        if self.type == 'xlsx':
-            self._to_xlsx()
-        elif self.type == 'csv':
+        if self.type == 'csv':
             self._to_csv()
+        elif self.type == 'xlsx':
+            self._to_xlsx()
         elif self.type == 'json':
             self._to_json()
-        else:
+        elif self.type == 'txt':
             self._to_txt()
 
     def _to_xlsx(self):

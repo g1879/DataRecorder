@@ -102,12 +102,14 @@ class OriginalRecorder(object):
                     if self.show_msg:
                         print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
 
-                except Exception:
+                except Exception as e:
                     if self._data:
                         if self.show_msg:
-                            print(
-                                f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n请显式调用record()保存数据。'
-                                f'\n{"=" * 30}')
+                            print(f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n'
+                                  f'错误信息：{e}\n'
+                                  f'提醒：请显式调用record()保存数据。\n{"=" * 30}')
+                            from traceback import print_exc
+                            print_exc()
                         return_data = self._data.copy()
                     break
 
@@ -119,7 +121,7 @@ class OriginalRecorder(object):
             if new_path:
                 self._path = original_path
 
-            if self.show_msg:
+            if self.show_msg and not return_data:
                 print(f'{self.path} 写入文件结束')
             self._data = []
             self._pause_add = False

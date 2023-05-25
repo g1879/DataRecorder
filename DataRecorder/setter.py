@@ -21,32 +21,15 @@ class OriginalSetter(object):
             raise TypeError('cache_size值只能是int，且必须>=0')
         self._recorder._cache = size
 
-    def path(self, path, file_type=None):
+    def path(self, path):
         """设置文件路径
         :param path: 文件路径
-        :param file_type: 要设置的文件类型，为空则从文件名中获取
         :return: None
         """
         if self._recorder._path:
-            self._recorder.record()  # 更换文件前自动记录剩余数据
+            self._recorder.record()
 
-        if file_type is not None and isinstance(file_type, str):
-            self._recorder._type = file_type
-        elif isinstance(path, str):
-            self._recorder._type = path.split('.')[-1].lower()
-        elif isinstance(path, Path):
-            self._recorder._type = path.suffix[1:].lower()
-        else:
-            raise TypeError(f'参数path只能是str或Path，非{type(path)}。')
-
-        if self._recorder._type not in self._recorder.SUPPORTS and 'any' not in self._recorder.SUPPORTS:
-            raise TypeError(f'只支持{"、".join(self._recorder.SUPPORTS)}格式文件。')
-
-        self._recorder._path = str(path) if isinstance(path, Path) else path
-
-    def file_type(self, file_type):
-        """指定文件类型，无视文件后缀名"""
-        self._recorder._type = file_type
+        self._recorder._path = str(path)
 
 
 class BaseSetter(OriginalSetter):
@@ -129,6 +112,30 @@ class SheetLikeSetter(BaseSetter):
         :return: None
         """
         self._recorder._quote_char = quote_char
+
+    def path(self, path, file_type=None):
+        """设置文件路径
+        :param path: 文件路径
+        :param file_type: 要设置的文件类型，为空则从文件名中获取
+        :return: None
+        """
+        super().path(path)
+
+        if not file_type:
+            suffix = Path(path).suffix.lower()
+            if suffix:
+                file_type = suffix[1:]
+            elif not self._recorder.type:
+                file_type = 'csv'
+
+        if file_type:
+            self.file_type(file_type)
+
+    def file_type(self, file_type):
+        """指定文件类型，无视文件后缀名"""
+        if 'any' not in self._recorder.SUPPORTS and file_type not in self._recorder.SUPPORTS:
+            raise TypeError(f'只支持{"、".join(self._recorder.SUPPORTS)}格式文件。')
+        self._recorder._type = file_type
 
 
 class FillerSetter(SheetLikeSetter):
@@ -260,13 +267,12 @@ class RecorderSetter(SheetLikeSetter):
 
 
 class DBSetter(BaseSetter):
-    def path(self, path, file_type=None):
+    def path(self, path):
         """重写父类方法
         :param path: 文件路径
-        :param file_type: 文件类型
         :return: None
         """
-        super().path(path, file_type)
+        super().path(path)
         if self._recorder._conn is not None:
             self._recorder._close_connection()
         self._recorder._connect()

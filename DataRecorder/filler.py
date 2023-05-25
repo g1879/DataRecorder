@@ -15,7 +15,7 @@ from .tools import parse_coord, get_usable_coord, process_content
 class Filler(BaseRecorder):
     def __init__(self, path=None, cache_size=None, key_cols=True, begin_row=2,
                  sign_col=True, data_col=None, sign=None, deny_sign=False) -> None:
-        """专门用于处理表格文件的工具。
+        """用于处理表格文件的工具
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行

@@ -11,7 +11,7 @@ class DBRecorder(BaseRecorder):
     SUPPORTS = ('db',)
 
     def __init__(self, path=None, cache_size=None, table=None):
-        """
+        """用于存储数据到sqlite的工具
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         :param table: 默认表名
@@ -20,6 +20,7 @@ class DBRecorder(BaseRecorder):
         self._cur = None
         super().__init__(path, cache_size)
         self._table = table
+        self._type = 'db'
 
     @property
     def set(self):
