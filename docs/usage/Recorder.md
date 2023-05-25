@@ -1,11 +1,11 @@
-`Recorder`用途最为广泛，它的功能简单直观高效实用，只做一个动作，就是不断接收数据，按顺序往文件里添加。可以接收单行数据，或二维数据一次写入多行。
+`Recorder`的功能简单直观高效实用，只做一个动作，就是不断接收数据，按顺序往文件里添加。可以接收单行数据，或二维数据一次写入多行。
 
-它主要支持 csv、xlsx、json、txt 四种格式文件，当目标文件不是这 4 种之一时，按 txt 的方式记录。
+它支持 csv、xlsx、json、txt 四种格式文件。
 
 # 🐘创建对象
 
 ```python
-from DataRecorder imoprt Recorder
+from DataRecorder import Recorder
 
 r = Recorder(path='data.csv', cache_size=500)
 ```
