@@ -18,7 +18,7 @@ r.record()  # 记录数据
 
 `Recorder`的功能简单直观高效实用，只做一个动作，就是不断接收数据，按顺序往文件里添加。可以接收单行数据，或二维数据一次写入多行。
 
-它支持 csv、xlsx、json、txt 四种格式文件。
+支持 csv、xlsx、json、txt 四种格式文件。
 
 ```python
 from DataRecorder import Recorder
@@ -33,7 +33,7 @@ r.record()  # 记录数据
 
 `Filler`用于对表格文件填写数据，可以指定填其坐标。使用非常灵活，可以指定坐标为左上角，填入一片二维数据。还封装了记录数据处理进度的功能（比如断点续爬）。除此以外，它还能给单元格设置链接。
 
-它支持 csv 和 xlsx 格式文件。
+支持 csv 和 xlsx 格式文件。
 
 ```python
 from DataRecorder import Filler
@@ -46,11 +46,12 @@ f.record()
 
 ### ⚡二进制数据记录器`ByteRecorder`
 
-`ByteRecorder`用法最简单，它和`Recorder`类似，记录多个数据然后按顺序写入文件。不一样的是它只接收二进制数据，每次`add_data()`只能传入一条数据，没有行的概念。
+`ByteRecorder`用法最简单，它和`Recorder`类似，记录多个数据然后按顺序写入文件。不一样的是它只接收二进制数据，每次`add_data()`
+只能传入一条数据，没有行的概念。
 
-可以用来和作者的另一个工具 [FlowViewer](https://gitee.com/g1879/FlowViewer) 配合使用，用来获取浏览器加载的文件，或用来记录下载的文件。可指定每个数据写入文件中的位置，以支持多线程下载文件。
+可指定每个数据写入文件中的位置，以支持多线程下载文件。
 
-它支持任意文件格式。
+支持任意文件格式。
 
 ```python
 from DataRecorder import ByteRecorder
@@ -63,6 +64,8 @@ b.record()
 ### ⚡数据库记录器`DBRecorder`
 
 用于向 sqlite 写入数据，用法和`Recorder`一致，支持自动创建数据库、数据表、数据列。
+
+支持 db 格式文件。
 
 ```python
 from DataRecorder import DBRecorder
