@@ -10,13 +10,15 @@ from .recorder import Recorder
 
 
 class OriginalSetter(object):
-    _recorder = OriginalRecorder
+    _recorder: OriginalRecorder = ...
 
     def __init__(self, recorder: OriginalRecorder): ...
 
     def cache_size(self, size: int) -> None: ...
 
     def path(self, path: Union[str, Path]) -> None: ...
+
+    def show_msg(self, on_off: bool) -> None: ...
 
 
 class BaseSetter(OriginalSetter):

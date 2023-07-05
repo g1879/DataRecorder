@@ -31,6 +31,12 @@ class OriginalSetter(object):
 
         self._recorder._path = str(path)
 
+    def show_msg(self, on_off):
+        """设置是否显示运行信息
+        :param on_off: bool表示开关
+        :return: None
+        """
+        self._recorder.show_msg = on_off
 
 class BaseSetter(OriginalSetter):
     def table(self, name):

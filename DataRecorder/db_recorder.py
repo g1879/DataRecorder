@@ -104,7 +104,15 @@ class DBRecorder(BaseRecorder):
                             tables[table].append(key)
 
                     keys_txt = ','.join(keys)
-                    values = ','.join(["'{}'".format(str(i).replace("'", "''")) for i in d.values()])
+                    values = []
+                    for i in d.values():
+                        if isinstance(i, str):
+                            values.append("'{}'".format(str(i).replace("'", "''").replace('\x00', '')))
+                        elif i is None:
+                            values.append('null')
+                        else:
+                            values.append(str(i))
+                    values = ','.join(values)
 
                 else:
                     d = self._data_to_list(d)
@@ -113,7 +121,15 @@ class DBRecorder(BaseRecorder):
                         raise RuntimeError('数据个数大于列数。')
 
                     keys_txt = ','.join(tables[table][:long])
-                    values = ','.join(["'{}'".format(str(i).replace("'", "''")) for i in d])
+                    values = []
+                    for i in d:
+                        if isinstance(i, str):
+                            values.append("'{}'".format(str(i).replace("'", "''").replace('\x00', '')))
+                        elif i is None:
+                            values.append('null')
+                        else:
+                            values.append(str(i))
+                    values = ','.join(values)
 
                 sql = f'INSERT INTO {table} ({keys_txt}) values ({values})'
                 self._cur.execute(sql)
