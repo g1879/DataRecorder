@@ -108,8 +108,7 @@ class OriginalRecorder(object):
                             print(f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n'
                                   f'错误信息：{e}\n'
                                   f'提醒：请显式调用record()保存数据。\n{"=" * 30}')
-                            from traceback import print_exc
-                            print_exc()
+                            raise
                         return_data = self._data.copy()
                     break
 

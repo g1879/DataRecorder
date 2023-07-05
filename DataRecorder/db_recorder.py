@@ -93,6 +93,8 @@ class DBRecorder(BaseRecorder):
             now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
 
             for d in now_data:
+                long = len(d)
+                v = ','.join('?' * long)
                 if isinstance(d, dict):
                     d = data_to_list_or_dict(self, d)
                     keys = d.keys()
@@ -104,35 +106,18 @@ class DBRecorder(BaseRecorder):
                             tables[table].append(key)
 
                     keys_txt = ','.join(keys)
-                    values = []
-                    for i in d.values():
-                        if isinstance(i, str):
-                            values.append("'{}'".format(str(i).replace("'", "''").replace('\x00', '')))
-                        elif i is None:
-                            values.append('null')
-                        else:
-                            values.append(str(i))
-                    values = ','.join(values)
+                    values = d.values()
+                    sql = f'INSERT INTO {table} ({keys_txt}) values ({v})'
 
                 else:
                     d = self._data_to_list(d)
-                    long = len(d)
                     if long > len(tables[table]):
                         raise RuntimeError('数据个数大于列数。')
 
-                    keys_txt = ','.join(tables[table][:long])
-                    values = []
-                    for i in d:
-                        if isinstance(i, str):
-                            values.append("'{}'".format(str(i).replace("'", "''").replace('\x00', '')))
-                        elif i is None:
-                            values.append('null')
-                        else:
-                            values.append(str(i))
-                    values = ','.join(values)
+                    values = d
+                    sql = f'INSERT INTO {table} values ({v})'
 
-                sql = f'INSERT INTO {table} ({keys_txt}) values ({values})'
-                self._cur.execute(sql)
+                self._cur.execute(sql, list(values))
 
         self._conn.commit()
 
