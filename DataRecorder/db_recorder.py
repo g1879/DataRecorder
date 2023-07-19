@@ -94,8 +94,8 @@ class DBRecorder(BaseRecorder):
 
             for d in now_data:
                 long = len(d)
-                v = ','.join('?' * long)
                 if isinstance(d, dict):
+                    question_masks = ','.join('?' * long)
                     d = data_to_list_or_dict(self, d)
                     keys = d.keys()
 
@@ -106,18 +106,23 @@ class DBRecorder(BaseRecorder):
                             tables[table].append(key)
 
                     keys_txt = ','.join(keys)
-                    values = d.values()
-                    sql = f'INSERT INTO {table} ({keys_txt}) values ({v})'
+                    values = list(d.values())
+                    sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
 
                 else:
                     d = self._data_to_list(d)
-                    if long > len(tables[table]):
+                    cols_num = len(tables[table])
+                    question_masks = ','.join('?' * cols_num)
+                    if long > cols_num:
                         raise RuntimeError('数据个数大于列数。')
 
-                    values = d
-                    sql = f'INSERT INTO {table} values ({v})'
+                    elif long < cols_num:
+                        d.extend([None] * (cols_num - long))
 
-                self._cur.execute(sql, list(values))
+                    values = d
+                    sql = f'INSERT INTO {table} values ({question_masks})'
+
+                self._cur.execute(sql, values)
 
         self._conn.commit()
 
