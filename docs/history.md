@@ -1,8 +1,15 @@
+---
+hide:
+  - navigation
+---
+
 ## v4.0.0
 
 - 修改设置项 api，`set_xxxx()`改为`set.xxxx()`形式
 
 - 优化结构和部分逻辑
+
+- 修复`DBRecorder`有关问题
 
 ## v3.3.2
 

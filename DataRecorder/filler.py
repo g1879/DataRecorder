@@ -6,17 +6,16 @@ from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font
-from openpyxl.utils import column_index_from_string
 
-from .base import BaseRecorder, parse_coord, process_content, get_usable_coord
+from .base import BaseRecorder
+from .setter import FillerSetter
+from .tools import parse_coord, get_usable_coord, process_content
 
 
 class Filler(BaseRecorder):
-    """Filler类用于根据现有文件中的关键字向文件填充数据"""
-
-    def __init__(self, path, cache_size=None, key_cols=True, begin_row=2,
+    def __init__(self, path=None, cache_size=None, key_cols=True, begin_row=2,
                  sign_col=True, data_col=None, sign=None, deny_sign=False) -> None:
-        """
+        """用于处理表格文件的工具
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
         :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行
@@ -27,125 +26,56 @@ class Filler(BaseRecorder):
         :param deny_sign: 是否反向匹配sign，即筛选sign_col列值不是sign的行
         """
         super().__init__(None, cache_size)
-        super().set_path(path)
+        self._delimiter = ','  # csv文件分隔符
+        self._quote_char = '"'  # csv文件引用符
         self._key_cols = None
         self._begin_row = None
         self._sign_col = None
         self._data_col = None
-        self.set_key_cols(key_cols)
-        self.set_begin_row(begin_row)
-        self.set_sign_col(sign_col)
-        if data_col:
-            self.set_data_col(data_col)
-        elif sign_col:
-            self.set_data_col(sign_col)
-        else:
-            self.set_data_col(1)
+        self._sign = None
+        self._deny_sign = False
+        if not data_col:
+            data_col = sign_col if sign_col else 1
+        self.set.path(path, key_cols, begin_row, sign_col, data_col, sign, deny_sign)
         self._link_font = Font(color="0000FF")
-        self._sign = sign
-        self._deny_sign = deny_sign
 
     @property
     def sign(self):
         """按这个值筛选需要的行纳入keys"""
         return self._sign
 
-    def set_sign(self, value: str):
-        """设置sign值
-        :param value: 筛选条件文本
-        :return: None
-        """
-        self._sign = value
-
     @property
     def deny_sign(self):
         """返回是否反向匹配sign"""
         return self._deny_sign
-
-    def set_deny_sign(self, on_off=True):
-        """设置是否反向匹配sign
-        :param on_off: bool表示开或关
-        :return: None
-        """
-        self._deny_sign = on_off
 
     @property
     def key_cols(self):
         """返回作为关键字的列或列的集合"""
         return self._key_cols
 
-    def set_key_cols(self, cols):
-        """设置作为关键字的列，可以是多列
-        :param cols: 列号或列名，或它们组成的list或tuple
-        :return: None
-        """
-        if cols is True:
-            self._key_cols = True
-        elif isinstance(cols, int) and cols > 0:
-            self._key_cols = [cols]
-        elif isinstance(cols, str):
-            self._key_cols = [int(cols)] if cols.isdigit() else [column_index_from_string(cols)]
-        elif isinstance(cols, (list, tuple)):
-            self._key_cols = [i if isinstance(i, int) and i > 0 else
-                              int(i) if i.isdigit() else column_index_from_string(i) for i in cols]
-        else:
-            raise TypeError('col值只能是int或str，且必须大于0。')
-
     @property
     def sign_col(self):
         """返回用于判断是否已填数据的列"""
         return self._sign_col
-
-    def set_sign_col(self, col):
-        """设置用于判断是否已填数据的列
-        :param col: 列号或列名
-        :return: None
-        """
-        if col is True or (isinstance(col, int) and col > 0):
-            self._sign_col = col
-        elif isinstance(col, str):
-            self._sign_col = int(col) if col.isdigit() else column_index_from_string(col)
-        else:
-            raise TypeError('col值只能是True、int或str，且必须大于0。')
 
     @property
     def data_col(self):
         """返回用于填充数据的列"""
         return self._data_col
 
-    def set_data_col(self, col):
-        """设置用于填充数据的列
-        :param col: 列号或列名
-        :return: None
-        """
-        if isinstance(col, int) and col > 0:
-            self._data_col = col
-        elif isinstance(col, str):
-            self._data_col = column_index_from_string(col)
-        else:
-            raise TypeError('col值只能是int或str，且必须大于0。')
-
     @property
     def begin_row(self):
         """返回数据开始的行号，用于获取keys，从1开始"""
         return self._begin_row
-
-    def set_begin_row(self, row):
-        """设置数据开始的行
-        :param row: 行号
-        :return: None
-        """
-        if not isinstance(row, int) or row < 1:
-            raise TypeError('row值只能是int，且必须大于0')
-        self._begin_row = row
 
     @property
     def keys(self):
         """返回一个列表，由未执行的行数据组成。每行的格式为第一位为行号，其余为 key 列的值。
         eg.[3, '张三', 20]
         """
-        if not Path(self.path).exists():
-            return []
+        if not self.path or not Path(self.path).exists():
+            raise FileNotFoundError('未指定文件或文件不存在。')
 
         if self.type == 'csv':
             return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
@@ -154,26 +84,22 @@ class Filler(BaseRecorder):
             return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign,
                                   self.key_cols, self.deny_sign, self.table)
 
-    def set_path(self, path, key_cols=None, begin_row=None, sign_col=None,
-                 data_col=None, sign=None, deny_sign=None) -> None:
-        """设置文件路径
-        :param path: 保存的文件路径
-        :param key_cols: 作为关键字的列，可以是多列
-        :param begin_row: 数据开始的行，默认表头一行
-        :param sign_col: 用于判断是否已填数据的列
-        :param data_col: 要填入数据的第一列
-        :param sign: 按这个值判断是否已填数据
-        :param deny_sign: 是否反向匹配sign，即筛选指不是sign的行
-        """
-        if not path or not Path(path).exists():
-            raise FileNotFoundError('文件不存在')
-        super().set_path(path)
-        self.set_key_cols(key_cols or self.key_cols)
-        self.set_begin_row(begin_row or self.begin_row)
-        self.set_sign_col(sign_col or self.sign_col)
-        self.set_sign(sign or self.sign)
-        self.set_data_col(data_col or self.data_col)
-        self.set_deny_sign(deny_sign if deny_sign is not None else self.deny_sign)
+    @property
+    def set(self):
+        """返回用于设置属性的对象"""
+        if self._setter is None:
+            self._setter = FillerSetter(self)
+        return self._setter
+
+    @property
+    def delimiter(self):
+        """返回csv文件分隔符"""
+        return self._delimiter
+
+    @property
+    def quote_char(self):
+        """返回csv文件引用符"""
+        return self._quote_char
 
     def add_data(self, data, coord='newline'):
         """添加数据，每次添加一行数据，可指定坐标、列号或行号
@@ -212,13 +138,6 @@ class Filler(BaseRecorder):
         if not isinstance(content, (int, str, float, type(None))):
             raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}。')
         self.add_data((coord, link, content), 'set_link')
-
-    def set_link_style(self, style):
-        """设置excel的链接样式
-        :param style: Font对象
-        :return: None
-        """
-        self._link_font = style
 
     def _record(self):
         """记录数据"""
@@ -338,8 +257,11 @@ def _get_xlsx_keys(path: str,
         ws = wb[table] if table else wb.active
 
     rows = ws.rows
-    for _ in range(begin_row - 1):
-        next(rows)
+    try:
+        for _ in range(begin_row - 1):
+            next(rows)
+    except StopIteration:
+        return []
 
     if sign_col is True or sign_col > ws.max_column:  # 获取所有行
         if key_cols is True:  # 获取整行
