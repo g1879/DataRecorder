@@ -2,16 +2,14 @@
 from sqlite3 import connect
 from time import sleep
 
-from .base import BaseRecorder
-from .setter import DBSetter
-from .tools import data_to_list_or_dict
+from .recorder import Recorder
 
 
-class DBRecorder(BaseRecorder):
+class DBRecorder(Recorder):
     SUPPORTS = ('db',)
 
     def __init__(self, path=None, cache_size=None, table=None):
-        """用于存储数据到sqlite的工具
+        """
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         :param table: 默认表名
@@ -20,19 +18,22 @@ class DBRecorder(BaseRecorder):
         self._cur = None
         super().__init__(path, cache_size)
         self._table = table
-        self._type = 'db'
-
-    @property
-    def set(self):
-        """返回用于设置属性的对象"""
-        if self._setter is None:
-            self._setter = DBSetter(self)
-        return self._setter
 
     def __del__(self):
         """重写父类方法"""
         super().__del__()
         self._close_connection()
+
+    def set_path(self, path, file_type=None):
+        """重写父类方法
+        :param path: 文件路径
+        :param file_type: 文件类型
+        :return: None
+        """
+        super().set_path(path, file_type)
+        if self._conn is not None:
+            self._close_connection()
+        self._connect()
 
     def add_data(self, data, table=None):
         """添加数据
@@ -93,10 +94,8 @@ class DBRecorder(BaseRecorder):
             now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
 
             for d in now_data:
-                long = len(d)
-                v = ','.join('?' * long)
                 if isinstance(d, dict):
-                    d = data_to_list_or_dict(self, d)
+                    d = self._data_to_list_or_dict(d)
                     keys = d.keys()
 
                     for key in keys:  # 检查是否要新增列
@@ -106,18 +105,19 @@ class DBRecorder(BaseRecorder):
                             tables[table].append(key)
 
                     keys_txt = ','.join(keys)
-                    values = d.values()
-                    sql = f'INSERT INTO {table} ({keys_txt}) values ({v})'
+                    values = ','.join([str(i) if not isinstance(i, str) else f'"{i}"' for i in d.values()])
 
                 else:
                     d = self._data_to_list(d)
+                    long = len(d)
                     if long > len(tables[table]):
                         raise RuntimeError('数据个数大于列数。')
 
-                    values = d
-                    sql = f'INSERT INTO {table} values ({v})'
+                    keys_txt = ','.join(tables[table][:long])
+                    values = ','.join([str(i) if not isinstance(i, str) else f'"{i}"' for i in d])
 
-                self._cur.execute(sql, list(values))
+                sql = f'INSERT INTO {table} ({keys_txt}) values ({values})'
+                self._cur.execute(sql)
 
         self._conn.commit()
 

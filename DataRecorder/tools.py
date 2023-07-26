@@ -1,10 +1,64 @@
 # -*- coding:utf-8 -*-
+from copy import copy
 from csv import reader as csv_reader, writer as csv_writer
-from pathlib import Path
-from re import search, sub, match
 
-from openpyxl.cell import Cell, ReadOnlyCell
-from openpyxl.utils import column_index_from_string
+from pathlib import Path
+from re import search, sub
+
+
+class CellStyle(object):
+    def __init__(self, from_cell=None):
+        if from_cell:
+            self._style = copy(from_cell._style)
+            self._font = copy(from_cell.font)
+            self._border = copy(from_cell.border)
+            self._fill = copy(from_cell.fill)
+            self._number_format = copy(from_cell.number_format)
+            self._protection = copy(from_cell.protection)
+            self._alignment = copy(from_cell.alignment)
+        else:
+            self._style = None
+            self._font = None
+            self._border = None
+            self._fill = None
+            self._number_format = None
+            self._protection = None
+            self._alignment = None
+
+    def set_alignment(self, alignment):
+        self._alignment = alignment
+
+    def set_font(self, font):
+        self._font = font
+
+    def set_border(self, border):
+        self._border = border
+
+    def set_fill(self, fill):
+        self._fill = fill
+
+    def set_number_format(self, number_format):
+        self._number_format = number_format
+
+    def set_protection(self, protection):
+        self._protection = protection
+
+    def to_cell(self, cell):
+        """把当前样式复制到目标单元格"""
+        if self._style:
+            cell._style = self._style
+        if self._alignment:
+            cell.alignment = self._alignment
+        if self._font:
+            cell.font = self._font
+        if self._border:
+            cell.border = self._border
+        if self._fill:
+            cell.fill = self._fill
+        if self._number_format:
+            cell.number_format = self._number_format
+        if self._protection:
+            cell.protection = self._protection
 
 
 def align_csv(path, encoding='utf-8', delimiter=',', quotechar='"'):
@@ -97,149 +151,3 @@ def _get_long(txt) -> int:
     """
     txt_len = len(txt)
     return int((len(txt.encode('utf-8')) - txt_len) / 2 + txt_len)
-
-
-def parse_coord(coord=None, data_col=None):
-    """添加数据，每次添加一行数据，可指定坐标、列号或行号
-    coord只输入数字（行号）时，列号为self.data_col值，如 3；
-    输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
-    输入 'newline' 时，表示新增一行，列号为self.data_col值；
-    输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]；
-    输入的行号可以是负数（列号不可以），代表从下往上数，-1是倒数第一行，如'a-3'、(-3, 3)
-    :param coord: 坐标、列号、行号
-    :param data_col: 列号，用于只传入行号的情况
-    :return: 坐标tuple：(行, 列)，或(None, 列)
-    """
-    return_coord = None
-    if coord == 'newline':  # 新增一行，列为data_col
-        return_coord = None, data_col
-
-    elif isinstance(coord, (int, float)) and coord != 0:
-        return_coord = int(coord), data_col
-
-    elif isinstance(coord, str):
-        coord = coord.replace(' ', '')
-
-        if coord.isalpha():  # 只输入列号，要新建一行
-            return_coord = None, column_index_from_string(coord)
-
-        elif ',' in coord:  # '3,1'形式
-            x, y = coord.split(',')
-            if x.lower() in ('', 'new', 'none', 'newline'):
-                x = None
-            elif x.isdigit():
-                x = int(x)
-            else:
-                raise ValueError('行格式不正确。')
-
-            if y.isdigit():
-                y = int(y)
-            elif y.isalpha():
-                y = column_index_from_string(y)
-            else:
-                raise TypeError('列格式不正确。')
-
-            return_coord = x, y
-
-        else:  # 'A3'形式
-            m = match(r'^[$]?([A-Za-z]{1,3})[$]?(-?\d+)$', coord)
-            if not m:
-                raise ValueError('坐标格式不正确。')
-            y, x = m.groups()
-            return_coord = int(x), column_index_from_string(y)
-
-    elif isinstance(coord, (tuple, list)):
-        if len(coord) != 2:
-            raise ValueError('coord为list或tuple时长度必须为2。')
-
-        x = None
-        if coord[0] not in (None, 'new', 'newline'):
-            x = int(coord[0])
-
-        if isinstance(coord[1], int):
-            y = coord[1]
-        elif isinstance(coord[1], str):
-            y = column_index_from_string(coord[1])
-        else:
-            raise TypeError('列格式不正确。')
-
-        return_coord = x, y
-
-    if not return_coord or return_coord[0] == 0 or return_coord[1] == 0:
-        raise ValueError(f'坐标{return_coord}格式不正确。')
-    return return_coord
-
-
-def process_content(content, excel=False):
-    """处理单个单元格要写入的数据
-    :param content: 未处理的数据内容
-    :param excel: 是否为excel文件
-    :return: 处理后的数据
-    """
-    if isinstance(content, (int, str, float, type(None))):
-        data = content
-    elif isinstance(content, (Cell, ReadOnlyCell)):
-        data = content.value
-    else:
-        data = str(content)
-
-    if excel and isinstance(data, str):
-        data = sub(r'[\000-\010]|[\013-\014]|[\016-\037]', '', data)
-
-    return data
-
-
-def ok_list(data_list, excel=False, as_str=False):
-    """处理列表中数据使其符合保存规范
-    :param data_list: 数据列表
-    :param excel: 是否保存在excel
-    :param as_str: 内容是否转为字符串
-    :return: 处理后的列表
-    """
-    if isinstance(data_list, dict):
-        data_list = data_list.values()
-    if as_str:
-        data_list = [str(i) for i in data_list]
-    return [process_content(i, excel) for i in data_list]
-
-
-def get_usable_coord(coord, max_row, max_col):
-    """返回真正写入文件的坐标
-    :param coord: 已初步格式化的坐标，如(1, 2)、(None, 3)、(-3, -2)
-    :param max_row: 文件最大行
-    :param max_col: 文件最大列
-    :return: 真正写入文件的坐标
-    """
-    row, col = coord
-    if col < 0:
-        col = max_col + col + 1
-        if col < 1:
-            raise ValueError(f'列号不能小于1。当前：{col}')
-
-    if row is None:
-        row = max_row + 1
-    elif row < 0:
-        row = max_row + row + 1
-        if row < 1:
-            raise ValueError(f'行号不能小于1。当前：{row}')
-
-    return row, col
-
-
-def data_to_list_or_dict(recorder, data):
-    """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
-    :param recorder: BaseRecorder对象
-    :param data: 要处理的数据
-    :return: 转变成列表或字典形式的数据
-    """
-    if isinstance(data, (list, tuple)):
-        return recorder._data_to_list(data)
-
-    elif isinstance(data, dict):
-        if isinstance(recorder.before, dict):
-            data = {**recorder.before, **data}
-
-        if isinstance(recorder.after, dict):
-            data = {**data, **recorder.after}
-
-        return data

@@ -5,47 +5,48 @@ from typing import Union
 
 from openpyxl import Workbook, load_workbook
 
-from .base import BaseRecorder
-from .cell_style import CellStyle
-from .setter import RecorderSetter
-from .tools import ok_list, data_to_list_or_dict
+from .base import BaseRecorder, ok_list
+from .tools import CellStyle
 
 
 class Recorder(BaseRecorder):
-    SUPPORTS = ('csv', 'xlsx', 'json', 'txt')
+    """用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销。
+    退出时能自动记录数据（xlsx格式除外），避免因异常丢失。
+    """
+    SUPPORTS = ('any',)
 
     def __init__(self, path=None, cache_size=None):
-        """用于缓存并记录数据，可在达到一定数量时自动记录，以降低文件读写次数，减少开销
-        :param path: 保存的文件路径
-        :param cache_size: 每接收多少条记录写入文件，0为不自动写入
-        """
         super().__init__(path=path, cache_size=cache_size)
         self._follow_styles = False
         self._row_styles = None
         self._row_styles_len = None
 
-        self._delimiter = ','  # csv文件分隔符
-        self._quote_char = '"'  # csv文件引用符
-
         self._col_height = None
         self._style = None
 
-    @property
-    def set(self):
-        """返回用于设置属性的对象"""
-        if self._setter is None:
-            self._setter = RecorderSetter(self)
-        return self._setter
+    def set_follow_styles(self, on_off=True):
+        """设置是否跟随最后一行的style，只有xlsx格式有效
+        :param on_off: True或False
+        :return: None
+        """
+        self._follow_styles = on_off
+        if not on_off:
+            self._row_styles = None
+            self._row_styles_len = None
 
-    @property
-    def delimiter(self):
-        """返回csv文件分隔符"""
-        return self._delimiter
+    def set_col_height(self, height):
+        """设置行高
+        :param height: 行高
+        :return: None
+        """
+        self._col_height = height
 
-    @property
-    def quote_char(self):
-        """返回csv文件引用符"""
-        return self._quote_char
+    def set_style(self, style):
+        """设置样式
+        :param style: CellStyle
+        :return: None
+        """
+        self._style = style
 
     def add_data(self, data):
         """添加数据，可一次添加多条数据
@@ -68,15 +69,19 @@ class Recorder(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
+    def set_path(self, path, file_type=None):
+        super().set_path(path=path, file_type=file_type)
+        self._row_styles = None
+
     def _record(self):
         """记录数据"""
-        if self.type == 'csv':
-            self._to_csv()
-        elif self.type == 'xlsx':
+        if self.type == 'xlsx':
             self._to_xlsx()
+        elif self.type == 'csv':
+            self._to_csv()
         elif self.type == 'json':
             self._to_json()
-        elif self.type == 'txt':
+        else:
             self._to_txt()
 
     def _to_xlsx(self):
@@ -143,7 +148,7 @@ class Recorder(BaseRecorder):
     def _to_txt(self):
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [' '.join(ok_list(data_to_list_or_dict(self, i), as_str=True)) for i in self._data]
+            all_data = [' '.join(ok_list(self._data_to_list_or_dict(i), as_str=True)) for i in self._data]
             f.write('\n'.join(all_data) + '\n')
 
     def _to_json(self):
@@ -154,13 +159,30 @@ class Recorder(BaseRecorder):
                 json_data = load(f)
 
             for i in self._data:
-                json_data.append(ok_list(data_to_list_or_dict(self, i)))
+                json_data.append(ok_list(self._data_to_list_or_dict(i)))
 
         else:
-            json_data = [ok_list(data_to_list_or_dict(self, i)) for i in self._data]
+            json_data = [ok_list(self._data_to_list_or_dict(i)) for i in self._data]
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
+
+    def _data_to_list_or_dict(self, data):
+        """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
+        :param data: 要处理的数据
+        :return: 转变成列表或字典形式的数据
+        """
+        if isinstance(data, (list, tuple)):
+            return self._data_to_list(data)
+
+        elif isinstance(data, dict):
+            if isinstance(self.before, dict):
+                data = {**self.before, **data}
+
+            if isinstance(self.after, dict):
+                data = {**data, **self.after}
+
+            return data
 
 
 def _get_title(data: Union[list, dict],
