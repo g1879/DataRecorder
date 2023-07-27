@@ -3,7 +3,7 @@ hide:
   - navigation
 ---
 
-## v4.0.0
+## v3.4.0
 
 - 修改设置项 api，`set_xxxx()`改为`set.xxxx()`形式
 

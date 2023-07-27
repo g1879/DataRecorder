@@ -8,6 +8,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font
 
 from .base import BaseRecorder
+from .cell_style import CellStyle
 from .setter import FillerSetter
 from .tools import parse_coord, get_usable_coord, process_content
 
@@ -18,9 +19,9 @@ class Filler(BaseRecorder):
         """用于处理表格文件的工具
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
-        :param key_cols: 作为关键字的列，可以是多列，从1开始，True表示获取整行
+        :param key_cols: 作为关键字的列，可以是多列，可以是列编号或序号，从1开始，True表示获取整行
         :param begin_row: 数据开始的行，默认表头一行
-        :param sign_col: 用于判断是否已填数据的列，从1开始，True表示获取所有行
+        :param sign_col: 用于判断是否已填数据的列，可以是列编号或序号，从1开始，True表示获取所有行，不进行判断
         :param data_col: 要填入数据的第一列，从1开始
         :param sign: 按这个值筛选需要的行纳入keys
         :param deny_sign: 是否反向匹配sign，即筛选sign_col列值不是sign的行
@@ -37,7 +38,9 @@ class Filler(BaseRecorder):
         if not data_col:
             data_col = sign_col if sign_col else 1
         self.set.path(path, key_cols, begin_row, sign_col, data_col, sign, deny_sign)
-        self._link_font = Font(color="0000FF")
+        s = CellStyle()
+        s.set_font(Font(color="0000FF"))
+        self._link_font = s
 
     @property
     def sign(self):
@@ -115,7 +118,7 @@ class Filler(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if coord != 'set_link':
+        if coord not in ('set_link', 'set_style'):
             coord = parse_coord(coord, self.data_col)
 
         if not isinstance(data, (list, tuple)):
@@ -138,6 +141,14 @@ class Filler(BaseRecorder):
         if not isinstance(content, (int, str, float, type(None))):
             raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}。')
         self.add_data((coord, link, content), 'set_link')
+
+    def set_style(self, coord, style):
+        """为单元格设置样式
+        :param coord: 单元格坐标
+        :param style: CellStyle对象
+        :return: None
+        """
+        self.add_data((coord, style), 'set_style')
 
     def _record(self):
         """记录数据"""
@@ -171,7 +182,13 @@ class Filler(BaseRecorder):
                 if data[1][2] is not None:
                     cell.value = process_content(data[1][2], True)
                 if self._link_font:
-                    cell.font = self._link_font
+                    self._link_font.to_cell(cell)
+                continue
+
+            elif data[0] == 'set_style':
+                coord = parse_coord(data[1][0], self.data_col)
+                row, col = get_usable_coord(coord, max_row, max_col)
+                data[1][1].to_cell(ws.cell(row, col))
                 continue
 
             row, col = get_usable_coord(data[0], max_row, max_col)
@@ -200,8 +217,8 @@ class Filler(BaseRecorder):
                     coord = parse_coord(i[1][0], self.data_col)
                     now_data = (f'=HYPERLINK("{i[1][1]}","{i[1][2] or i[1][1]}")',)
 
-                # elif i[0] in ('set_color', 'set_background'):
-                #     continue
+                elif i[0] == 'set_style':
+                    continue
 
                 else:
                     coord = i[0]

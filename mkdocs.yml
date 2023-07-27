@@ -40,15 +40,15 @@ theme:
       quote: octicons/quote-16
 
   palette:
-    # Palette toggle for light mode
-    - media: "(prefers-color-scheme: light)"
-      scheme: slate
+    - scheme: default
+      primary: teal
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    # Palette toggle for dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: default
+
+      # Palette toggle for dark mode
+    - scheme: slate
+      primary: teal
       toggle:
         icon: material/brightness-4
         name: Switch to light mode

@@ -148,7 +148,7 @@ class SheetLikeSetter(BaseSetter):
 class FillerSetter(SheetLikeSetter):
     def sign(self, value):
         """设置sign值
-        :param value: 筛选条件文本
+        :param value: 筛选条件
         :return: None
         """
         self._recorder._sign = value
