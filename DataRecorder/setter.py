@@ -231,8 +231,8 @@ class FillerSetter(SheetLikeSetter):
         self._recorder.set.deny_sign(deny_sign if deny_sign is not None else self._recorder.deny_sign)
 
     def link_style(self, style):
-        """设置excel的链接样式
-        :param style: Font对象
+        """设置单元格的链接样式
+        :param style: CellStyle对象
         :return: None
         """
         self._recorder._link_font = style
