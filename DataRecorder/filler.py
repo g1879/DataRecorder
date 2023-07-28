@@ -144,7 +144,7 @@ class Filler(BaseRecorder):
 
     def set_style(self, coord, style):
         """为单元格设置样式
-        :param coord: 单元格坐标
+        :param coord: 单元格坐标，输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围
         :param style: CellStyle对象
         :return: None
         """
@@ -186,7 +186,19 @@ class Filler(BaseRecorder):
                 continue
 
             elif data[0] == 'set_style':
-                coord = parse_coord(data[1][0], self.data_col)
+                coord = data[1][0]
+                if isinstance(coord, int) or (isinstance(coord, str) and coord.isalpha()):
+                    for c in ws[coord]:
+                        data[1][1].to_cell(c)
+                    continue
+
+                elif isinstance(coord, str) and ':' in coord:
+                    for c in ws[coord]:
+                        for cc in c:
+                            data[1][1].to_cell(cc)
+                    continue
+
+                coord = parse_coord(coord, self.data_col)
                 row, col = get_usable_coord(coord, max_row, max_col)
                 data[1][1].to_cell(ws.cell(row, col))
                 continue
