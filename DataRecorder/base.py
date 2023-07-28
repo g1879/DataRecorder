@@ -221,3 +221,18 @@ class BaseRecorder(OriginalRecorder):
                 return_list.extend([str(i)])
 
         return return_list
+
+    # ---------------即将废弃--------------------
+    def set_before(self, before):
+        """设置before
+        :param before: before
+        :return: None
+        """
+        self.set.before(before)
+
+    def set_after(self, after):
+        """设置after
+        :param after: after
+        :return: None
+        """
+        self.set.after(after)

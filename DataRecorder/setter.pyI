@@ -22,7 +22,7 @@ class OriginalSetter(object):
 
 
 class BaseSetter(OriginalSetter):
-    _recorder = BaseRecorder
+    _recorder: BaseRecorder = ...
 
     def table(self, name: str) -> None: ...
 

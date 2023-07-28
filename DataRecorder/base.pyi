@@ -2,7 +2,7 @@
 from abc import abstractmethod
 from pathlib import Path
 from threading import Lock
-from typing import Union, Any
+from typing import Union, Any, Optional
 
 from .setter import OriginalSetter, BaseSetter
 
@@ -11,7 +11,7 @@ class OriginalRecorder(object):
     SUPPORTS: tuple = ...
 
     def __init__(self,
-                 path: Union[str, Path] = None,
+                 path: Optional[str, Path] = None,
                  cache_size: int = None) -> None:
         self._cache: int = ...
         self._path: str = ...
@@ -40,7 +40,7 @@ class OriginalRecorder(object):
     @property
     def data(self) -> list: ...
 
-    def record(self, new_path: Union[str, Path] = None) -> Union[str, list]: ...
+    def record(self, new_path: Optional[str, Path] = None) -> Union[str, list]: ...
 
     def clear(self) -> None: ...
 
@@ -54,7 +54,7 @@ class OriginalRecorder(object):
 class BaseRecorder(OriginalRecorder):
     SUPPORTS = ('xlsx', 'csv')
 
-    def __init__(self, path: Union[str, Path] = None, cache_size: int = None) -> None:
+    def __init__(self, path: Optional[str, Path] = None, cache_size: int = None) -> None:
         self._encoding: str = ...
         self._before: list = ...
         self._after: list = ...

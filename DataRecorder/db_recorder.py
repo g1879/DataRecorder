@@ -55,6 +55,19 @@ class DBRecorder(BaseRecorder):
         if 0 < self.cache_size <= len(self._data):
             self.record()
 
+    def run_sql(self, sql, single=True, commit=False):
+        """执行sql语句并返回结果
+        :param sql: sql语句
+        :param single: 是否只获取一个结果
+        :param commit: 是否提交到数据库
+        :return: 查找到的结果，没有结果时返回None
+        """
+        self._cur.execute(sql)
+        r = self._cur.fetchone() if single else self._cur.fetchall()
+        if commit:
+            self._conn.commit()
+        return r
+
     def _connect(self):
         """链接数据库"""
         self._conn = connect(self.path)
