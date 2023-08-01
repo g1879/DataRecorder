@@ -1,10 +1,15 @@
 # -*- coding:utf-8 -*-
 from copy import copy
 
-from openpyxl.styles import Font, Side
+from openpyxl.styles import Font, Side, Border
 
 
 class CellStyle(object):
+    font_args = ('name', 'size', 'charset', 'underline', 'color', 'scheme', 'vertAlign',
+                 'bold', 'italic', 'strike', 'outline', 'shadow', 'condense', 'extend')
+    border_args = ('start', 'end', 'left', 'right', 'top', 'bottom', 'diagonal', 'vertical', 'horizontal',
+                   'horizontal', 'outline', 'diagonalUp', 'diagonalDown')
+
     def __init__(self):
         self._style = None
         self._font = None
@@ -20,25 +25,31 @@ class CellStyle(object):
             self._font = CellFont()
         return self._font
 
+    @property
+    def border(self):
+        if self._border is None:
+            self._border = CellBorder()
+        return self._border
+
+    @property
+    def alignment(self):
+        if self._alignment is None:
+            self._alignment = CellAlignment()
+        return self._alignment
+
     def to_cell(self, cell):
         """把当前样式复制到目标单元格"""
         if self._font:
-            args = ('name', 'size', 'charset', 'underline', 'color', 'scheme', 'vertAlign',
-                    'bold', 'italic', 'strike', 'outline', 'shadow', 'condense', 'extend')
-            d = {}
-            for arg in args:
-                tmp = getattr(self._font, arg)
-                d[arg] = getattr(cell.font, arg) if tmp == 'notSet' else tmp
+            d = _handle_args(self.font_args, self._font, cell.font)
+            d['family'] = cell.font.family
+            cell.font = Font(**d)
 
-            cell.font = Font(name=d['name'], sz=d['size'], b=d['bold'], i=d['italic'], charset=d['charset'],
-                             u=d['underline'], strike=d['strike'], color=d['color'], scheme=d['scheme'],
-                             family=cell.font.family, vertAlign=d['vertAlign'], outline=d['outline'],
-                             shadow=d['shadow'], condense=d['condense'], extend=d['extend'])
+        if self._border:
+            d = _handle_args(self.border_args, self._border, cell.border)
+            cell.border = Border(**d)
 
         if self._alignment:
             cell.alignment = self._alignment
-        if self._border:
-            cell.border = self._border
         if self._fill:
             cell.fill = self._fill
         if self._number_format:
@@ -47,7 +58,19 @@ class CellStyle(object):
             cell.protection = self._protection
 
 
+def _handle_args(args, src, target):
+    d = {}
+    for arg in args:
+        tmp = getattr(src, arg)
+        d[arg] = getattr(target, arg) if tmp == 'notSet' else tmp
+    return d
+
+
 class CellFont(object):
+    LINE_STYLES = ('single', 'double', 'singleAccounting', 'doubleAccounting', None)
+    SCHEMES = ('major', 'minor', None)
+    VERT_ALIGNS = ('superscript', 'subscript', 'baseline', None)
+
     def __init__(self):
         self.name = 'notSet'
         self.charset = 'notSet'
@@ -145,37 +168,35 @@ class CellFont(object):
 
     def set_underline(self, option):
         """设置下划线
-        :param option: 下划线类型，可选 'single', 'double', 'singleAccounting', 'doubleAccounting'，False为取消
+        :param option: 下划线类型，可选 'single', 'double', 'singleAccounting', 'doubleAccounting'，None为清除
         :return: None
         """
-        if option not in ('single', 'double', 'singleAccounting', 'doubleAccounting', None):
-            raise ValueError(
-                "option参数只能是'single', 'double', 'singleAccounting', 'doubleAccounting', None其中之一。")
+        if option not in self.LINE_STYLES:
+            raise ValueError(f'option参数只能是{self.LINE_STYLES}其中之一。')
         self.underline = option
 
     def set_vertAlign(self, option):
-        """设置居中？
-        :param option: 可选 'superscript', 'subscript', 'baseline'
+        """设置上下标
+        :param option: 可选 'superscript', 'subscript', 'baseline'，None为清除
         :return: None
         """
-        if option not in ('superscript', 'subscript', 'baseline', None):
-            raise ValueError(
-                "option参数只能是'single', 'double', 'singleAccounting', 'doubleAccounting', None其中之一。")
+        if option not in self.VERT_ALIGNS:
+            raise ValueError(f'option参数只能是{self.VERT_ALIGNS}其中之一。')
         self.vertAlign = option
 
     def set_scheme(self, option):
         """设置scheme
-        :param option: 可选 'major', 'minor'
+        :param option: 可选 'major', 'minor'，None为清除
         :return: None
         """
-        if option not in ('single', 'double', 'singleAccounting', 'doubleAccounting', False):
-            raise ValueError("option参数只能是'major', 'minor', False其中之一。")
+        if option not in self.SCHEMES:
+            raise ValueError(f'option参数只能是{self.SCHEMES}其中之一。')
         self.scheme = option
 
 
 class CellBorder(object):
-    line_style = ('dashDot', 'dashDotDot', 'dashed', 'dotted', 'double', 'hair', 'medium', 'mediumDashDot',
-                  'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin')
+    LINE_STYLES = ('dashDot', 'dashDotDot', 'dashed', 'dotted', 'double', 'hair', 'medium', 'mediumDashDot',
+                   'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin', None)
 
     def __init__(self):
         self.start = 'notSet'
@@ -199,8 +220,8 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.start = Side(style=style, color=color)
 
     def set_end(self, style, color):
@@ -210,8 +231,8 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.end = Side(style=style, color=color)
 
     def set_left(self, style, color):
@@ -221,8 +242,8 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.left = Side(style=style, color=color)
 
     def set_right(self, style, color):
@@ -232,8 +253,8 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.right = Side(style=style, color=color)
 
     def set_top(self, style, color):
@@ -243,8 +264,8 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.top = Side(style=style, color=color)
 
     def set_bottom(self, style, color):
@@ -254,41 +275,41 @@ class CellBorder(object):
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.bottom = Side(style=style, color=color)
 
     def set_diagonal(self, style, color):
-        """设置
+        """设置对角线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.diagonal = Side(style=style, color=color)
 
     def set_vertical(self, style, color):
-        """设置
+        """设置垂直中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.vertical = Side(style=style, color=color)
 
     def set_horizontal(self, style, color):
-        """设置
+        """设置水平中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'
         :param color: 颜色
         :return: None
         """
-        if style not in self.line_style:
-            raise ValueError(f'style参数只能是{self.line_style}之一。')
+        if style not in self.LINE_STYLES:
+            raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
         self.horizontal = Side(style=style, color=color)
 
     def set_outline(self, on_off):
@@ -311,3 +332,8 @@ class CellBorder(object):
         :return: None
         """
         self.diagonalUp = on_off
+
+
+class CellAlignment(object):
+    def __init__(self):
+        pass
