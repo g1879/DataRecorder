@@ -235,7 +235,7 @@ class FillerSetter(SheetLikeSetter):
         :param style: CellStyle对象
         :return: None
         """
-        self._recorder._link_font = style
+        self._recorder._link_style = style
 
 
 class RecorderSetter(SheetLikeSetter):

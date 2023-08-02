@@ -1,4 +1,6 @@
 # -*- coding:utf-8 -*-
+from copy import copy
+
 from openpyxl.styles import Alignment, Font, Side, Border, Protection, GradientFill, PatternFill
 
 
@@ -14,7 +16,7 @@ class CellStyle(object):
     pattern_fill_args = ('patternType', 'fgColor', 'bgColor')
 
     def __init__(self):
-        self._style = None
+        """用于管理单元格样式的类"""
         self._font = None
         self._border = None
         self._alignment = None
@@ -23,26 +25,37 @@ class CellStyle(object):
         self._number_format = None
         self._protection = None
 
+        # 用于覆盖目标单元格的对象
+        self._Font = None
+        self._Border = None
+        self._Alignment = None
+        self._Fill = None
+        self._Protection = None
+
     @property
     def font(self):
+        """返回用于设置单元格字体的对象"""
         if self._font is None:
             self._font = CellFont()
         return self._font
 
     @property
     def border(self):
+        """返回用于设置单元格边框的对象"""
         if self._border is None:
             self._border = CellBorder()
         return self._border
 
     @property
     def alignment(self):
+        """返回用于设置单元格对齐选项的对象"""
         if self._alignment is None:
             self._alignment = CellAlignment()
         return self._alignment
 
     @property
     def pattern_fill(self):
+        """返回用于设置单元格填充的对象"""
         self._gradient_fill = None
         if self._pattern_fill is None:
             self._pattern_fill = CellPatternFill()
@@ -50,25 +63,42 @@ class CellStyle(object):
 
     @property
     def gradient_fill(self):
+        """返回用于设置单元格渐变填充的对象"""
         self._pattern_fill = None
         if self._gradient_fill is None:
             self._gradient_fill = CellGradientFill()
         return self._gradient_fill
 
     @property
-    def CellNumFormat(self):
+    def number_format(self):
+        """返回用于设置单元格数字格式的对象"""
         if self._number_format is None:
-            self._number_format = CellAlignment()
+            self._number_format = CellNumberFormat()
         return self._number_format
 
     @property
     def protection(self):
+        """返回用于设置单元格保护选项的对象"""
         if self._protection is None:
             self._protection = CellProtection()
         return self._protection
 
-    def to_cell(self, cell):
-        """把当前样式复制到目标单元格"""
+    def to_cell(self, cell, replace=True):
+        """把当前样式复制到目标单元格
+        :param cell: 被设置样式的单元格对象
+        :param replace: 是否直接替换目标单元格的样式，是的话效率较高，但不能保留未被设置的原有样式项
+        :return: None
+        """
+        if replace:
+            self._replace_to_cell(cell)
+        else:
+            self._cover_to_cell(cell)
+
+    def _cover_to_cell(self, cell):
+        """把当前样式复制到目标单元格，只覆盖有设置的项，没有设置的原有的项不变
+        :param cell: 被设置样式的单元格对象
+        :return: None
+        """
         if self._font:
             d = _handle_args(self.font_args, self._font, cell.font)
             d['family'] = cell.font.family
@@ -92,12 +122,56 @@ class CellStyle(object):
             d = _handle_args(self.gradient_fill_args, self._gradient_fill, f)
             cell.fill = GradientFill(**d)
 
-        if self._number_format:
-            cell.number_format = self._number_format
+        if self._number_format and self._number_format.format != 'notSet':
+            cell.number_format = self._number_format.format
 
         if self._protection:
             d = _handle_args(self.protection_args, self._protection, cell.protection)
             cell.protection = Protection(**d)
+
+    def _replace_to_cell(self, cell):
+        """把当前样式复制到目标单元格，覆盖原有的设置
+        :param cell: 被设置样式的单元格对象
+        :return: None
+        """
+        if self._font:
+            if self._Font is None:
+                d = _handle_args(self.font_args, self._font, None)
+                self._Font = Font(**d)
+            cell.font = self._Font
+
+        if self._border:
+            if self._Border is None:
+                d = _handle_args(self.border_args, self._border, None)
+                self._Border = Border(**d)
+            cell.border = self._Border
+
+        if self._alignment:
+            if self._Alignment is None:
+                d = _handle_args(self.alignment_args, self._alignment, None)
+                self._Alignment = Alignment(**d)
+            cell.alignment = self._Alignment
+
+        if self._pattern_fill:
+            if not isinstance(self._Fill, PatternFill):
+                d = _handle_args(self.pattern_fill_args, self._pattern_fill, None)
+                self._Fill = PatternFill(**d)
+            cell.fill = self._Fill
+
+        elif self._gradient_fill:
+            if not isinstance(self._Fill, GradientFill):
+                d = _handle_args(self.gradient_fill_args, self._gradient_fill, None)
+                self._Fill = GradientFill(**d)
+            cell.fill = self._Fill
+
+        if self._number_format and self._number_format.format != 'notSet':
+            cell.number_format = self._number_format.format
+
+        if self._protection:
+            if self._Protection is None:
+                d = _handle_args(self.protection_args, self._protection, None)
+                self._Protection = Protection(**d)
+            cell.protection = self._Protection
 
 
 def _handle_args(args, src, target=None):
@@ -572,7 +646,16 @@ class CellPatternFill(object):
 
 class CellNumberFormat(object):
     def __init__(self):
-        pass
+        self.format = 'notSet'
+
+    def set_format(self, string):
+        """设置数字格式
+        :param string: 格式字符串，为None时恢复默认
+        :return: None
+        """
+        if string is None:
+            string = 'General'
+        self.format = string
 
 
 class CellProtection(object):
@@ -593,3 +676,30 @@ class CellProtection(object):
         :return: None
         """
         self.locked = on_off
+
+
+class CellStyleCopier(object):
+    def __init__(self, from_cell):
+        """
+        :param from_cell: 被复制单元格对象
+        """
+        self._style = copy(from_cell._style)
+        self._font = copy(from_cell.font)
+        self._border = copy(from_cell.border)
+        self._fill = copy(from_cell.fill)
+        self._number_format = copy(from_cell.number_format)
+        self._protection = copy(from_cell.protection)
+        self._alignment = copy(from_cell.alignment)
+
+    def to_cell(self, cell):
+        """把当前样式复制到目标单元格
+        :param cell: 被设置样式的单元格对象
+        :return: None
+        """
+        cell._style = self._style
+        cell.alignment = self._alignment
+        cell.font = self._font
+        cell.border = self._border
+        cell.fill = self._fill
+        cell.number_format = self._number_format
+        cell.protection = self._protection

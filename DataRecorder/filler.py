@@ -5,7 +5,6 @@ from time import sleep
 from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
-from openpyxl.styles import Font
 
 from .base import BaseRecorder
 from .cell_style import CellStyle
@@ -39,8 +38,9 @@ class Filler(BaseRecorder):
             data_col = sign_col if sign_col else 1
         self.set.path(path, key_cols, begin_row, sign_col, data_col, sign, deny_sign)
         s = CellStyle()
-        s.set_font(Font(color="0000FF"))
-        self._link_font = s
+        s.font.set_color("0000FF")
+        s.font.set_underline('single')
+        self._link_style = s
 
     @property
     def sign(self):
@@ -118,7 +118,7 @@ class Filler(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if coord not in ('set_link', 'set_style'):
+        if coord not in ('set_link', 'cover_style', 'replace_style'):
             coord = parse_coord(coord, self.data_col)
 
         if not isinstance(data, (list, tuple)):
@@ -142,13 +142,15 @@ class Filler(BaseRecorder):
             raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}。')
         self.add_data((coord, link, content), 'set_link')
 
-    def set_style(self, coord, style):
+    def set_style(self, coord, style, replace=True):
         """为单元格设置样式
         :param coord: 单元格坐标，输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围
         :param style: CellStyle对象
+        :param replace: 是否直接替换已有样式，运行效率较高，但不能单独修改某个属性
         :return: None
         """
-        self.add_data((coord, style), 'set_style')
+        s = 'replace_style' if replace else 'cover_style'
+        self.add_data((coord, style), s)
 
     def _record(self):
         """记录数据"""
@@ -181,26 +183,27 @@ class Filler(BaseRecorder):
                 cell.hyperlink = process_content(data[1][1], True)
                 if data[1][2] is not None:
                     cell.value = process_content(data[1][2], True)
-                if self._link_font:
-                    self._link_font.to_cell(cell)
+                if self._link_style:
+                    self._link_style.to_cell(cell, replace=False)
                 continue
 
-            elif data[0] == 'set_style':
+            elif data[0] in ('replace_style', 'cover_style'):
+                mode = data[0] == 'replace_style'
                 coord = data[1][0]
                 if isinstance(coord, int) or (isinstance(coord, str) and coord.isalpha()):
                     for c in ws[coord]:
-                        data[1][1].to_cell(c)
+                        data[1][1].to_cell(c, replace=mode)
                     continue
 
                 elif isinstance(coord, str) and ':' in coord:
                     for c in ws[coord]:
                         for cc in c:
-                            data[1][1].to_cell(cc)
+                            data[1][1].to_cell(cc, replace=mode)
                     continue
 
                 coord = parse_coord(coord, self.data_col)
                 row, col = get_usable_coord(coord, max_row, max_col)
-                data[1][1].to_cell(ws.cell(row, col))
+                data[1][1].to_cell(ws.cell(row, col), replace=mode)
                 continue
 
             row, col = get_usable_coord(data[0], max_row, max_col)
@@ -229,7 +232,7 @@ class Filler(BaseRecorder):
                     coord = parse_coord(i[1][0], self.data_col)
                     now_data = (f'=HYPERLINK("{i[1][1]}","{i[1][2] or i[1][1]}")',)
 
-                elif i[0] == 'set_style':
+                elif i[0] in ('cover_style', 'replace_style'):
                     continue
 
                 else:

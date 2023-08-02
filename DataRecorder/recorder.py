@@ -6,7 +6,7 @@ from typing import Union
 from openpyxl import Workbook, load_workbook
 
 from .base import BaseRecorder
-from .cell_style import CellStyle
+from .cell_style import CellStyleCopier
 from .setter import RecorderSetter
 from .tools import ok_list, data_to_list_or_dict
 
@@ -91,7 +91,7 @@ class Recorder(BaseRecorder):
 
             if self._follow_styles and self._row_styles is None:
                 row_num = ws.max_row
-                self._row_styles = [CellStyle(i) for i in ws[row_num]]
+                self._row_styles = [CellStyleCopier(i) for i in ws[row_num]]
                 self._row_styles_len = len(self._row_styles)
                 self._col_height = ws.row_dimensions[row_num].height
 
