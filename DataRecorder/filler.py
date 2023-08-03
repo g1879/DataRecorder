@@ -190,7 +190,7 @@ class Filler(BaseRecorder):
             elif data[0] in ('replace_style', 'cover_style'):
                 mode = data[0] == 'replace_style'
                 coord = data[1][0]
-                if isinstance(coord, int) or (isinstance(coord, str) and coord.isalpha()):
+                if isinstance(coord, int) or (isinstance(coord, str) and coord.isdigit()):
                     for c in ws[coord]:
                         data[1][1].to_cell(c, replace=mode)
                     continue

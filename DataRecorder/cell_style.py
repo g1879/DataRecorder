@@ -280,10 +280,10 @@ class CellFont(object):
 
     def set_color(self, color):
         """设置字体颜色
-        :param color: 字体演示字符串，如`FFF000`，None表示恢复默认
+        :param color: 字体颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
-        self.color = color
+        self.color = get_color_code(color)
 
     def set_underline(self, option):
         """设置下划线
@@ -336,100 +336,100 @@ class CellBorder(object):
         """设置start
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.start = Side(style=style, color=color)
+        self.start = Side(style=style, color=get_color_code(color))
 
     def set_end(self, style, color):
         """设置end
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.end = Side(style=style, color=color)
+        self.end = Side(style=style, color=get_color_code(color))
 
     def set_left(self, style, color):
         """设置左边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.left = Side(style=style, color=color)
+        self.left = Side(style=style, color=get_color_code(color))
 
     def set_right(self, style, color):
         """设置右边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.right = Side(style=style, color=color)
+        self.right = Side(style=style, color=get_color_code(color))
 
     def set_top(self, style, color):
         """设置上边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.top = Side(style=style, color=color)
+        self.top = Side(style=style, color=get_color_code(color))
 
     def set_bottom(self, style, color):
         """设置下边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.bottom = Side(style=style, color=color)
+        self.bottom = Side(style=style, color=get_color_code(color))
 
     def set_diagonal(self, style, color):
         """设置对角线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.diagonal = Side(style=style, color=color)
+        self.diagonal = Side(style=style, color=get_color_code(color))
 
     def set_vertical(self, style, color):
         """设置垂直中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.vertical = Side(style=style, color=color)
+        self.vertical = Side(style=style, color=get_color_code(color))
 
     def set_horizontal(self, style, color):
         """设置水平中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 线条颜色
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
         :return: None
         """
         if style not in self.LINE_STYLES:
             raise ValueError(f'style参数只能是{self.LINE_STYLES}之一。')
-        self.horizontal = Side(style=style, color=color)
+        self.horizontal = Side(style=style, color=get_color_code(color))
 
     def set_outline(self, on_off):
         """
@@ -634,14 +634,14 @@ class CellPatternFill(object):
         :param color: 颜色字符串，None为恢复默认
         :return: None
         """
-        self.fgColor = color
+        self.fgColor = get_color_code(color)
 
     def set_bgColor(self, color):
         """设置背景色
         :param color: 颜色字符串，None为恢复默认
         :return: None
         """
-        self.bgColor = color
+        self.bgColor = get_color_code(color)
 
 
 class CellNumberFormat(object):
@@ -703,3 +703,31 @@ class CellStyleCopier(object):
         cell.fill = self._fill
         cell.number_format = self._number_format
         cell.protection = self._protection
+
+
+def get_color_code(color):
+    """将颜色拼音转为代码
+    :param color: 颜色名称或代码字符串
+    :return: 颜色代码
+    """
+    __COLORS__ = {
+        'white': 'FFFFFF',
+        'black': '000000',
+        'red': 'ED1941',
+        'green': '7FB80E',
+        'blue': '009AD6',
+        'purple': '8552A1',
+        'yellow': 'FFFF00',
+        'orange': 'F58220'
+    }
+    color = str(color)
+    if ',' in color:
+        color = color.replace(' ', '').lstrip('(').rstrip(')')
+        RGB = color.split(',')
+        color = ''
+        for i in RGB:
+            num = int(i)
+            color += str(hex(num))[-2:].replace('x', '0').upper()
+        return color
+
+    return __COLORS__.get(color, color).lstrip('#')

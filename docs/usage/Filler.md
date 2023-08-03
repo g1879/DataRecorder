@@ -110,9 +110,7 @@ f.add_data(data, 'd')
 
 ---
 
-## 📂 设置单元格链接和样式
-
-### 🔗 设置链接
+## 🔗 设置单元格链接
 
 很多时候须要在 xlsx 文件里设置链接，可使用`set_link()`方法进行设置，用法和`add_data()`类似。xlsx 和 csv 文件都支持。
 
@@ -124,19 +122,62 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 
 ---
 
-### 🌺 设置样式
+## 🌺 设置单元格样式
 
-也可以对某个单元格设置样式，使用`set_sytle()`方法。此方法只支持 xlsx 格式文件。
+### ☘️ 使用方法
 
-创建`CellStyle`对象，传入此方法即可。
+使用`set_sytle()`方法可对一个或多个单元格设置样式。此方法只支持 xlsx 格式文件。
+
+创建`CellStyle`对象，传入此方法即可。`CellStyle`介绍详见相关章节。
+
+可设置范围：
+
+- 单个单元格：传入单元格坐标
+
+- 整行：传入行号，`int`格式
+
+- 整列：传入列名，`str`格式
+
+- 指定范围：传入`'A1:B3'`格式字符串，指定一个矩形范围
 
 ```python
 from DataRecorder import Filler, CellStyle
 
 f = Filler('demo.xlsx')
 c = CellStyle()  # 创建样式对象
+c.font.set_bold(True)  # 设置字体为加粗
 
 f.set_style('A1', c)  # 设置A1单元格样式
+f.set_style(2, c)  # 设置第2行整行样式
+f.set_style('A', c)  # 设置A列整列样式
+f.set_style('B3:D5', c)  # 设置矩形范围内单元格样式
+f.record()
+```
+
+---
+
+### ☘️ 设置方式
+
+`set_style()`方法有两种设置方法，用`replace`参数控制。
+
+`replace`为`Ture`时，原有样式会被新样式完全替换，为`False`时则只覆盖被设置的样式项。
+
+**示例：**
+
+比如单元格字体原来是红色、加粗的，新样式把字体设置为绿色，没有指定是否加粗。
+
+当`replace`为`True`时，设置后单元格的字体加粗属性会被覆盖，而当`replace`为`False`时，单元格字体编程绿色，仍保留加粗的属性。
+
+```python
+from DataRecorder import Filler, CellStyle
+
+f = Filler('demo.xlsx')
+c = CellStyle()
+c.font.set_color('green')
+
+f.set_style('a1', c, True)  # 所有font属性被覆盖
+f.set_style('b1', c, False)  # 只有字体颜色被覆盖
+
 f.record()
 ```
 
@@ -227,14 +268,14 @@ for key in f.keys:
 from DataRecorder import Filler
 from DownloadKit import DownloadKit
 
-d = DownloadKit('files')  ## 创建DownloadKit对象，指定下载路径
+d = DownloadKit('files')  # 创建DownloadKit对象，指定下载路径
 f = Filler('data.csv', key_cols=1, sign_col=2)
-for key in f.keys:  ##  遍历任务
+for key in f.keys:  # 遍历任务
     row, url = key
-    mission = d.add(url)  ## # 新建下载任务
-    mission.wait(  ##  # 等待下载完成
-        path=mission.pa  ##   # 获取保存路径
-    f.add_data(('ok', path), r  ## )  # 回填到表格文件
+    mission = d.add(url)  # 新建下载任务
+    mission.wait()  # 等待下载完成
+    path=mission.path  # 获取保存路径
+    f.add_data(('ok', path), row)  # 回填到表格文件
 ```
 
 现在表格文件内容为：
@@ -302,12 +343,15 @@ for key in f.keys:  ##  遍历任务
 
 此方法用于为单元格设置样式。
 
-输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围。
+输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可指定范围。
 
-| 参数名称    | 类型                                  | 默认值 | 说明             |
-|:-------:|:-----------------------------------:|:---:|----------------|
-| `coord` | `int`<br>`str`<br>`tuple`<br>`list` | 必填  | 单元格坐标、行号、列号或范围 |
-| `style` | `CellStyle`                         | 必填  | 样式对象           |
+`replace` 参数为`True`时，会用样式对象直接替换单元格原有样式对象，即使未被设置的项也会替换。为`False`时，只替换在`CellStyle`中设置的项。为`True`时运行效率比较高。
+
+| 参数名称      | 类型                                  | 默认值    | 说明             |
+|:---------:|:-----------------------------------:|:------:| -------------- |
+| `coord`   | `int`<br>`str`<br>`tuple`<br>`list` | 必填     | 单元格坐标、行号、列号或范围 |
+| `style`   | `CellStyle`                         | 必填     | 样式对象           |
+| `replace` | `bool`                              | `True` | 是否直接替换已有样式     |
 
 **返回：**`None`
 
@@ -315,11 +359,10 @@ for key in f.keys:  ##  遍历任务
 
 ```python
 from DataRecorder import Filler, CellStyle
-from openpyxl.styles import Font
 
 f = Filler('demo.xlsx')
 c = CellStyle()
-c.set_font(Font(color='FF6100'))
+c.font.set_color('FF6100')
 
 f.set_style('a3:c5', c)  # 设置范围单元格样式
 f.record()
