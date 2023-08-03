@@ -5,6 +5,12 @@ hide:
 
 ## v3.4.0
 
+- `Filler`增加设置单元格样式功能
+
+- 增加`CellStyle`类用于管理单元格样式
+
+- `DBRecorder`增加`run_sql()`方法
+
 - 修改设置项 api，`set_xxxx()`改为`set.xxxx()`形式
 
 - 优化结构和部分逻辑

@@ -7,7 +7,7 @@ from typing import Union, List
 from openpyxl import load_workbook, Workbook
 
 from .base import BaseRecorder
-from .cell_style import CellStyle
+from .cell_style import CellStyle, NoneStyle
 from .setter import FillerSetter
 from .tools import parse_coord, get_usable_coord, process_content
 
@@ -190,20 +190,21 @@ class Filler(BaseRecorder):
             elif data[0] in ('replace_style', 'cover_style'):
                 mode = data[0] == 'replace_style'
                 coord = data[1][0]
+                style = NoneStyle() if data[1][1] is None else data[1][1]
                 if isinstance(coord, int) or (isinstance(coord, str) and coord.isdigit()):
                     for c in ws[coord]:
-                        data[1][1].to_cell(c, replace=mode)
+                        style.to_cell(c, replace=mode)
                     continue
 
                 elif isinstance(coord, str) and ':' in coord:
                     for c in ws[coord]:
                         for cc in c:
-                            data[1][1].to_cell(cc, replace=mode)
+                            style.to_cell(cc, replace=mode)
                     continue
 
                 coord = parse_coord(coord, self.data_col)
                 row, col = get_usable_coord(coord, max_row, max_col)
-                data[1][1].to_cell(ws.cell(row, col), replace=mode)
+                style.to_cell(ws.cell(row, col), replace=mode)
                 continue
 
             row, col = get_usable_coord(data[0], max_row, max_col)

@@ -74,6 +74,7 @@ nav:
     - 🐨 DBRecorder: usage/DBRecorder.md
     - 🐼 Filler: usage/Filler.md
     - 🐻 ByteRecorder: usage/ByteRecorder.md
+    - 🌺 设置单元格样式: usage/CellStyle.md
     - 🌳 进阶用法: usage/advance.md
     - ⚠️ 注意事项: usage/attentions.md
 
