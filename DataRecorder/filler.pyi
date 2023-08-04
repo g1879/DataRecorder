@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union, List, Any, Tuple, Optional
 
 from .base import BaseRecorder
-from .cell_style import CellStyle
+from .style.cell_style import CellStyle
 from .setter import FillerSetter
 
 

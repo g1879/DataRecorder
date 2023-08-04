@@ -217,6 +217,45 @@ r.add_data(data)
 
 ---
 
+## 🌺 设置单元格样式
+
+可以对新增数据行的单元格样式进行设置，有两种模式：跟随上一行、直接指定样式。
+
+设置样式只对 xlsx 格式文件有效。
+
+### ☘️ 跟随上一行
+
+在对已有格式的文件添加数据时，这种方式可以使新行样式自动保持与原有行一致。
+
+```python
+from DataRecorder import Recorder
+
+r = Recorder('demo.xlsx')
+r.set.follow_styles(on_off=True)  # 设置跟随上一行的样式
+
+r.add_data('test')
+r.record()
+```
+
+---
+
+### ☘️ 指定样式
+
+也可以创建一个`CellStyle`对象，指定新行使用这个样式进行添加。
+
+```python
+from DataRecorder import Recorder
+from DataRecorder.style import CellStyle
+
+r = Recorder('demo.xlsx')
+c = CellStyle()  # 创建样式对象
+c.font.set_color('red')  # 设置文本颜色
+r.set.style(c)  # 设置新行样式
+
+r.add_data('test')
+r.record()
+```
+
 ## ♾️ `Recorder`对象的方法
 
 ### 📌 `add_data()`

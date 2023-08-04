@@ -7,7 +7,7 @@ from typing import Union, List
 from openpyxl import load_workbook, Workbook
 
 from .base import BaseRecorder
-from .cell_style import CellStyle, NoneStyle
+from .style.cell_style import CellStyle, NoneStyle
 from .setter import FillerSetter
 from .tools import parse_coord, get_usable_coord, process_content
 

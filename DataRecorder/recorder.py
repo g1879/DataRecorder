@@ -6,7 +6,7 @@ from typing import Union
 from openpyxl import Workbook, load_workbook
 
 from .base import BaseRecorder
-from .cell_style import CellStyleCopier
+from .style.cell_style import CellStyleCopier
 from .setter import RecorderSetter
 from .tools import ok_list, data_to_list_or_dict
 

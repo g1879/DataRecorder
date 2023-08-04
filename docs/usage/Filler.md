@@ -141,7 +141,8 @@ f.set_link(coord='a5', link='https://www.baidu.com', content='百度')
 - 指定范围：传入`'A1:B3'`格式字符串，指定一个矩形范围
 
 ```python
-from DataRecorder import Filler, CellStyle
+from DataRecorder import Filler
+from DataRecorder.style import CellStyle
 
 f = Filler('demo.xlsx')
 c = CellStyle()  # 创建样式对象
@@ -169,7 +170,8 @@ f.record()
 当`replace`为`True`时，设置后单元格的字体加粗属性会被覆盖，而当`replace`为`False`时，单元格字体编程绿色，仍保留加粗的属性。
 
 ```python
-from DataRecorder import Filler, CellStyle
+from DataRecorder import Filler
+from DataRecorder.style import CellStyle
 
 f = Filler('demo.xlsx')
 c = CellStyle()
@@ -368,7 +370,8 @@ for key in f.keys:  # 遍历任务
 **示例：**
 
 ```python
-from DataRecorder import Filler, CellStyle
+from DataRecorder import Filler
+from DataRecorder.style import CellStyle
 
 f = Filler('demo.xlsx')
 c = CellStyle()

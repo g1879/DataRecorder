@@ -3,7 +3,7 @@
 ## 🐘 导入和创建对象
 
 ```python
-from DataRecorder import CellStyle
+from DataRecorder.style import CellStyle
 
 c = CellStyle()
 ```
@@ -17,7 +17,7 @@ c = CellStyle()
 - `font`：文本格式设置
 - `border`：边框格式设置
 - `alignment`：对齐选项设置
-- `pattern_fill`：一般填充设置，与`gradient_fill`互斥
+- `pattern_fill`：图案填充设置，与`gradient_fill`互斥
 - `gradient_fill`：渐变填充设置，与`pattern_fill`互斥
 - `number_format`：数字格式设置
 - `protection`：单元格保护设置
@@ -30,6 +30,63 @@ c = CellStyle()
 
 ```python
 c.font.set_color('red') 
+```
+
+---
+
+## 🎨 颜色格式
+
+字体、边框、背景涉及到颜色的设置，这里支持以下几种格式：
+
+### 🖌️ 颜色名称
+
+以下几种颜色可以直接用名字设置
+
+- `'white'`：白色
+- `'black'`：黑色
+- `'red'`：红色
+- `'green'`：绿色
+- `'blue'`：蓝色
+- `'purple'`：紫色
+- `'yellow'`：黄色
+- `'orange'`：橙色
+
+```python
+from DataRecorder.style import CellStyle
+
+c = CellStyle()
+c.font.set_color('red')
+```
+
+---
+
+### 🖌️ 颜色代码
+
+可以用`str`或`tuple`传入十六进制、十进制的颜色代码。
+
+```python
+from DataRecorder.style import CellStyle
+
+c = CellStyle()
+c.font.set_color('FFF000')  # 十六进制代码
+c.font.set_color('255,255,0')  # 十进制代码，str格式
+c.font.set_color((255, 255, 0))  # 十进制代码，tuple格式
+```
+
+---
+
+### 🖌️ 使用`Color`对象
+
+`Color`对象是 openpyxl 内置对象，除了颜色，还可以设置透明度等。
+
+具体使用方法见 openpyxl 文档。
+
+```python
+from DataRecorder.style import CellStyle, Color
+
+color = Color('FFF000')  # 创建Color对象
+style = CellStyle()
+style.font.set_color(color)  # 用Color对象设置颜色
 ```
 
 ---
@@ -160,11 +217,11 @@ c.font.set_color('red')
 
 ### 📌 `font.set_color()`
 
-此方法用于设置字体颜色。格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`均可，`None`表示恢复默认。
+此方法用于设置字体颜色。格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`, `Color`对象均可，`None`表示恢复默认。
 
-|  参数名称   |        类型        | 默认值 | 说明                |
-|:-------:|:----------------:|:---:|-------------------|
-| `color` | `str`<br>`tuple` | 必填  | 字体颜色，`None`表示恢复默认 |
+|  参数名称   |                  类型                   | 默认值 | 说明                |
+|:-------:|:-------------------------------------:|:---:|-------------------|
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 字体颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -216,16 +273,16 @@ c.font.set_color('red')
 
 线形可选：`'dashDot'`, `'dashDotDot'`, `'dashed'`, `'dotted'`, `'double'`, `'hair'`, `'medium'`, `'mediumDashDot'`, `'mediumDashDotDot'`, `'mediumDashed'`, `'slantDashDot'`, `'thick'`, `'thin'`，`None`表示恢复默认。
 
-颜色格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`均可，`None`表示恢复默认。
+颜色格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`, `Color`对象均可，`None`表示恢复默认。
 
 ### 📌 `border.set_start()`
 
 此方法用于设置 start 属性。
 
-| 参数名称 | 类型 | 默认值 | 说明 |
-|:----:|:--:|:---:|---------------------|
-|  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| 参数名称 |             类型             | 默认值 | 说明 |
+|:----:|:--------------------------:|:---:|---------------------|
+|  `style`  |      `str`<br>`None`       | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -238,7 +295,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -251,7 +308,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -264,7 +321,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -277,7 +334,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -290,7 +347,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -303,7 +360,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -316,7 +373,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -329,7 +386,7 @@ c.font.set_color('red')
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
 |  `style`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
-|  `color`  | `str`<br>`None` | 必填 | 在类型种选择，`None`表示恢复默认 |
+| `color` | `str`<br>`tuple`<br>`Color`<br>`None` | 必填  | 颜色，`None`表示恢复默认 |
 
 **返回：**`None`
 
@@ -489,7 +546,7 @@ c.font.set_color('red')
 
 ## ✅ `pattern_fill`设置
 
-此属性用于设置一般填充方式。
+此属性用于设置图案填充方式。
 
 与`gradient_fill`互斥，会清除已有`gradient_fill`设置。
 
@@ -511,11 +568,11 @@ c.font.set_color('red')
 
 此方法用于设置前景色。
 
-格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`均可，`None`表示恢复默认。
+格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`, `Color`对象均可，`None`表示恢复默认。
 
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
-| `color` | `str`<br>`tuple` | 必填 | 颜色 |
+| `color` | `str`<br>`tuple`<br>`Color` | 必填  | 颜色 |
 
 **返回：**`None`
 
@@ -525,11 +582,11 @@ c.font.set_color('red')
 
 此方法用于设置背景色。
 
-格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`均可，`None`表示恢复默认。
+格式：`'FFFFFF'`, `'255,255,255'`, `(255, 255, 255)`, `Color`对象均可，`None`表示恢复默认。
 
 | 参数名称 | 类型 | 默认值 | 说明 |
 |:----:|:--:|:---:|---------------------|
-| `color` | `str`<br>`tuple` | 必填 | 颜色 |
+| `color` | `str`<br>`tuple`<br>`Color` | 必填 | 颜色 |
 
 **返回：**`None`
 

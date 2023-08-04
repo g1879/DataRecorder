@@ -2,7 +2,7 @@
 from copy import copy
 from threading import Lock
 
-from openpyxl.styles import Alignment, Font, Side, Border, Protection, GradientFill, PatternFill
+from openpyxl.styles import Alignment, Font, Side, Border, Protection, GradientFill, PatternFill, Color
 
 
 class CellStyle(object):
@@ -56,7 +56,7 @@ class CellStyle(object):
 
     @property
     def pattern_fill(self):
-        """返回用于设置单元格填充的对象"""
+        """返回用于设置单元格图案填充的对象"""
         self._gradient_fill = None
         if self._pattern_fill is None:
             self._pattern_fill = CellPatternFill()
@@ -281,7 +281,7 @@ class CellFont(object):
 
     def set_color(self, color):
         """设置字体颜色
-        :param color: 字体颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 字体颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         self.color = get_color_code(color)
@@ -337,7 +337,7 @@ class CellBorder(object):
         """设置start
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -348,7 +348,7 @@ class CellBorder(object):
         """设置end
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -359,7 +359,7 @@ class CellBorder(object):
         """设置左边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -370,7 +370,7 @@ class CellBorder(object):
         """设置右边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -381,7 +381,7 @@ class CellBorder(object):
         """设置上边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -392,7 +392,7 @@ class CellBorder(object):
         """设置下边框
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -403,7 +403,7 @@ class CellBorder(object):
         """设置对角线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -414,7 +414,7 @@ class CellBorder(object):
         """设置垂直中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -425,7 +425,7 @@ class CellBorder(object):
         """设置水平中线
         :param style: 线形，'dashDot','dashDotDot', 'dashed','dotted', 'double','hair', 'medium', 'mediumDashDot',
                       'mediumDashDotDot', 'mediumDashed', 'slantDashDot', 'thick', 'thin'，None表示恢复默认
-        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 边框颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         if style not in self._LINE_STYLES:
@@ -632,14 +632,14 @@ class CellPatternFill(object):
 
     def set_fgColor(self, color):
         """设置前景色
-        :param color: 颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         self.fgColor = get_color_code(color)
 
     def set_bgColor(self, color):
         """设置背景色
-        :param color: 颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255)均可，None表示恢复默认
+        :param color: 颜色，格式：'FFFFFF', '255,255,255', (255, 255, 255), Color对象均可，None表示恢复默认
         :return: None
         """
         self.bgColor = get_color_code(color)
@@ -713,10 +713,12 @@ def get_color_code(color):
     """
     if color is None:
         return '000000'
+    if isinstance(color, Color):
+        return color
     __COLORS__ = {
         'white': 'FFFFFF',
         'black': '000000',
-        'red': 'ED1941',
+        'red': 'FF0000',
         'green': '7FB80E',
         'blue': '009AD6',
         'purple': '8552A1',

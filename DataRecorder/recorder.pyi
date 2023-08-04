@@ -2,7 +2,7 @@
 from typing import Any, Optional
 
 from .base import BaseRecorder
-from .cell_style import CellStyle
+from .style.cell_style import CellStyle
 from .setter import RecorderSetter
 
 
