@@ -1,10 +1,10 @@
-# 📰设置表头
+## 📰 设置表头
 
 用表格文件做数据采集的时候，要设置表头，我们可以把表头作为第一条数据通过`add_data()`方法添加到文件。但我们通常会使用同一段代码对一个文件进行多批次写入，如果每次都执行到这个语句，就会写入多个表头行。
 
-因此设计了一个设置表头的方法`set_head()`，`Recorder`还有一个自动设置表头的功能。
+因此设计了一个设置表头的方法`set.head()`，`Recorder`还有一个自动设置表头的功能。
 
-## 📜自动设置
+### 📜 自动设置
 
 自动设置只有`Recorder`支持，同时满足两个条件就能自动激活：
 
@@ -28,9 +28,9 @@ r.add_data(data)
 | --- | --- |
 | 张三  | 男   |
 
-## 📜手动设置
+### 📜 手动设置
 
-`set_head()`方法可以为 xlsx 或 csv 文件设置表头，无论文件是否已创建。任何时候都可以使用。
+`set.head()`方法可以为 xlsx 或 csv 文件设置表头，无论文件是否已创建。任何时候都可以使用。
 
 `Recorder`和`Filler`都支持此方法。
 
@@ -38,13 +38,14 @@ r.add_data(data)
 from DataRecorder import Recorder
 
 r = Recorder('data.csv')
-r.set_head(('姓名', '性别'))
+r.set.head(('姓名', '性别'))
 r.add_data(('张三', '男'))
 ```
 
-!>**注意：**<br>`set_head()`会覆盖第一行内容，使用时要注意。
+!!! warning "注意"
+`set.head()`会覆盖第一行内容，使用时要注意。
 
-# 🏷为每条数据添加固定前后缀
+## 🔖 为每条数据添加固定前后缀
 
 有些时候，数据采集的时候要为该批次每条数据都录入同一个内容，比如日期。我们当然可以直接在数据里面加上这些列，但有一个更方便的方法，可以减少这些内容对采集代码的干扰。就是`before`和`after`属性。
 
@@ -55,12 +56,12 @@ r.add_data(('张三', '男'))
 下面这个示例，采集 gitee 开源项目前 5 页。此示例使用 [DrissionPage](http://g1879.gitee.io/drissionpage) 进行页面访问和解析。
 
 ```python
-from DrissionPage import MixPage
+from DrissionPage import SessionPage
 from DataRecorder import Recorder
 
 def get_list(page, recorder):
     """获取一页信息并添加到记录器"""
-    p = MixPage('s')  # 创建页面对象
+    p = SessionPage()  # 创建页面对象
     url = f'https://gitee.com/explore/all?page={page}'
     p.get(url)  # 访问页面
     rows = p('.ui relaxed divided items explore-repo__list').eles('.item')
@@ -95,8 +96,8 @@ if __name__ == '__main__':
 
 ```python
 r = Recorder('data.xlsx')
-r.set_before({'date': '2022-06-10'})
-r.set_after({'staff': 'g1879'})
+r.set.before({'date': '2022-06-10'})
+r.set.after({'staff': 'g1879'})
 ```
 
 现在删掉刚才的文件重新执行采集，得到以下文件内容：
@@ -108,11 +109,11 @@ r.set_after({'staff': 'g1879'})
 | 2022-06-10 | 1    | 徐小夕/dooringx    | 开箱即用的H5可视化搭建框架，轻松搭建自己的可视化搭建平台                                                                       | 31    | g1879 |
 |            |      | 以下省略。。。         |                                                                                                     |       |       |
 
-也许您已经注意到，代码没有执行`set_head()`，但前后两列的`key`值也加到表头里去了。
+也许您已经注意到，代码没有执行`set.head()`，但前后两列的`key`值也加到表头里去了。
 
 而且这两个属性还支持多列，可以接收`list`、`tuple`、`dict`等，添加前后列。
 
-# 🧶多线程写入文件
+## 🧶 多线程写入文件
 
 做数据采集的时候经常用到多线程，多线程同时记录到文件容易产生冲突。本库为多线程数据采集提供了支持，只要在主线程中创建记录器对象，分发到各个采集线程中使用即可。用法和单线程一致，可避免写入冲突。
 
@@ -141,4 +142,5 @@ def main():
 | 4    | RichardoMu/yolov5-smoking-detect         | A C++ implementation of Yolov5 to detect peaple smoking running in Jetson Xavier nx and Jetson nano.   | 6     |
 |      | 以下省略。。。                                  |                                                                                                        |       |
 
+!!! warning "注意"
 因为是多线程采集，文件内容并不是按顺序添加。

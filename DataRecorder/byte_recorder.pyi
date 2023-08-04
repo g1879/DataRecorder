@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 from .base import OriginalRecorder
 
@@ -10,7 +10,7 @@ class ByteRecorder(OriginalRecorder):
     __END: tuple = ...
 
     def __init__(self,
-                 path: Union[str, Path] = None,
+                 path: Optional[str, Path] = None,
                  cache_size: int = None): ...
 
     def add_data(self,

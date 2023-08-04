@@ -6,11 +6,14 @@ from .base import OriginalRecorder
 
 
 class ByteRecorder(OriginalRecorder):
-    """用于记录字节数据的工具"""
     SUPPORTS = ('any',)
     __END = (0, 2)
 
     def __init__(self, path=None, cache_size=None):
+        """用于记录字节数据的工具
+        :param path: 保存的文件路径
+        :param cache_size: 每接收多少条记录写入文件，0为不自动写入
+        """
         super().__init__(path, cache_size)
 
     def add_data(self, data, seek=None):
@@ -20,7 +23,7 @@ class ByteRecorder(OriginalRecorder):
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
-            sleep(.1)
+            sleep(.2)
 
         if not isinstance(data, bytes):
             raise TypeError('只能接受bytes类型数据。')
