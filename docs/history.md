@@ -3,7 +3,7 @@ hide:
   - navigation
 ---
 
-## v3.4.0
+## v3.4.1
 
 - `Filler`增加设置单元格样式功能
 
