@@ -106,10 +106,9 @@ class DBRecorder(BaseRecorder):
             now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
 
             for d in now_data:
-                long = len(d)
                 if isinstance(d, dict):
-                    question_masks = ','.join('?' * long)
                     d = data_to_list_or_dict(self, d)
+                    question_masks = ','.join('?' * len(d))
                     keys = d.keys()
 
                     for key in keys:  # 检查是否要新增列
@@ -124,6 +123,7 @@ class DBRecorder(BaseRecorder):
 
                 else:
                     d = self._data_to_list(d)
+                    long = len(d)
                     cols_num = len(tables[table])
                     if long > cols_num:
                         raise RuntimeError('数据个数大于列数。')
@@ -133,6 +133,7 @@ class DBRecorder(BaseRecorder):
                     values = d
                     sql = f'INSERT INTO {table} values ({question_masks})'
 
+                values = [str(i) if i is not None and not isinstance(i, (str, float, int, bool)) else i for i in values]
                 self._cur.execute(sql, values)
 
         self._conn.commit()
