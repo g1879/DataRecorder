@@ -25,6 +25,7 @@ class OriginalRecorder(object):
         self._pause_write = False  # 标记文件正在被一个线程写入
         self.show_msg = True
         self._setter = None
+        self._data_count = 0  # 已缓存数据的条数
 
         if path:
             self.set.path(path)
@@ -123,6 +124,7 @@ class OriginalRecorder(object):
             if self.show_msg and not return_data:
                 print(f'{self.path} 写入文件结束')
             self._data = []
+            self._data_count = 0
             self._pause_add = False
 
         return return_data if return_data else return_path

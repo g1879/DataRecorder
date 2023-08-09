@@ -125,8 +125,9 @@ class Filler(BaseRecorder):
             data = (data,)
 
         self._data.append((coord, data))
+        self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
 
-        if 0 < self.cache_size <= len(self._data):
+        if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def set_link(self, coord, link, content=None):

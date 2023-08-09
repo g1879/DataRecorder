@@ -62,10 +62,12 @@ class Recorder(BaseRecorder):
         # 一维数组
         if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
             self._data.append(data)
+            self._data_count += 1
         else:  # 二维数组
             self._data.extend(data)
+            self._data_count += len(data)
 
-        if 0 < self.cache_size <= len(self._data):
+        if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def _record(self):

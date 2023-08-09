@@ -51,8 +51,9 @@ class DBRecorder(BaseRecorder):
             raise RuntimeError('未指定数据库表名。')
 
         self._data.append((table, data))
+        self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
 
-        if 0 < self.cache_size <= len(self._data):
+        if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def run_sql(self, sql, single=True, commit=False):
