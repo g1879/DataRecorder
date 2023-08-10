@@ -274,15 +274,25 @@ class RecorderSetter(SheetLikeSetter):
 
 
 class DBSetter(BaseSetter):
-    def path(self, path):
+    def path(self, path, table=None):
         """重写父类方法
         :param path: 文件路径
+        :param table: 数据表名称
         :return: None
         """
         super().path(path)
         if self._recorder._conn is not None:
             self._recorder._close_connection()
         self._recorder._connect()
+
+        if table:
+            self._recorder._table = table
+            return
+
+        r = self._recorder.run_sql("select name from sqlite_master where type='table'")
+        if r:
+            self._recorder._table = r[0]
+
 
 
 def set_csv_head(file_path, head, encoding='utf-8', delimiter=',', quote_char='"'):

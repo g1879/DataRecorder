@@ -18,8 +18,9 @@ class DBRecorder(BaseRecorder):
         """
         self._conn = None
         self._cur = None
-        super().__init__(path, cache_size)
-        self._table = table
+        super().__init__(None, cache_size)
+        if path:
+            self.set.path(path, table)
         self._type = 'db'
 
     @property

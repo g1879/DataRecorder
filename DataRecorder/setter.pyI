@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from pathlib import Path
-from typing import Union, Any
+from typing import Union, Any, Optional
 
 from .base import OriginalRecorder, BaseRecorder
 from .cell_style import CellStyle
@@ -86,9 +86,11 @@ class RecorderSetter(SheetLikeSetter):
 
 
 class DBSetter(BaseSetter):
+    _recorder: DBRecorder = ...
+
     def __init__(self, recorder: DBRecorder): ...
 
-    def path(self, path: Union[str, Path]) -> None: ...
+    def path(self, path: Union[str, Path], table: Optional[str] = None) -> None: ...
 
 
 def set_csv_head(file_path: str, head: Union[list, tuple], encoding: str = 'utf-8', delimiter: str = ',',
