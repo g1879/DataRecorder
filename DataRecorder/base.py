@@ -201,9 +201,10 @@ class BaseRecorder(OriginalRecorder):
     def _record(self):
         pass
 
-    def _data_to_list(self, data):
+    def _data_to_list(self, data, long=0):
         """将传入的数据转换为列表形式，添加前后列数据
         :param data: 要处理的数据
+        :param long: 数据总长度，不够的位数用None补足
         :return: 转变成列表方式的数据
         """
         return_list = []
@@ -221,6 +222,10 @@ class BaseRecorder(OriginalRecorder):
                 return_list.extend(list(i))
             else:
                 return_list.extend([str(i)])
+        
+        l = len(return_list)
+        if long > l:
+            return_list.extend([None] * (long - l))
 
         return return_list
 
