@@ -123,7 +123,7 @@ class OriginalRecorder(object):
 
             if self.show_msg and not return_data:
                 print(f'{self.path} 写入文件结束')
-            self._data = []
+            self.clear()
             self._data_count = 0
             self._pause_add = False
 
@@ -201,7 +201,7 @@ class BaseRecorder(OriginalRecorder):
     def _record(self):
         pass
 
-    def _data_to_list(self, data, long=0):
+    def _data_to_list(self, data, long=None):
         """将传入的数据转换为列表形式，添加前后列数据
         :param data: 要处理的数据
         :param long: 数据总长度，不够的位数用None补足
@@ -223,9 +223,12 @@ class BaseRecorder(OriginalRecorder):
             else:
                 return_list.extend([str(i)])
         
-        l = len(return_list)
-        if long > l:
-            return_list.extend([None] * (long - l))
+        if long:
+            l = len(return_list)
+            if long > l:
+                return_list.extend([None] * (long - l))
+            elif long < l:
+                raise RuntimeError('数据个数大于列数（注意before和after）。')
 
         return return_list
 

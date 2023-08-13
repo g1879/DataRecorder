@@ -22,6 +22,7 @@ class DBRecorder(BaseRecorder):
         if path:
             self.set.path(path, table)
         self._type = 'db'
+        self._data = {}
 
     @property
     def set(self):
@@ -44,15 +45,24 @@ class DBRecorder(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if not isinstance(data, (list, tuple)):
-            data = (data,)
-
         table = table or self.table
         if table is None:
             raise RuntimeError('未指定数据库表名。')
 
-        self._data.append((table, data))
-        self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
+        if table not in self._data:
+            self._data[table] = []
+
+        if not isinstance(data, (list, tuple, dict)):
+            data = (data,)
+
+        # 一维数组
+        if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
+            self._data_count += 1
+            self._data[table].append(data)
+
+        else:  # 二维数组
+            self._data[table].extend(data)
+            self._data_count += len(data)
 
         if 0 < self.cache_size <= self._data_count:
             self.record()
@@ -81,12 +91,38 @@ class DBRecorder(BaseRecorder):
             self._cur.close()
             self._conn.close()
 
-    def _record(self):
-        """记录数据"""
-        if self.type == 'db':
-            self._to_sqlite()
+    def _to_database(self, data_list, table, tables):
+        """把数据批量写入指定数据表
+        :param data_list: 要写入的数据组成的列表
+        :param table: 要写入数据的数据表名称
+        :param tables: 数据库中数据表和列信息
+        :return: None
+        """
+        if table not in tables:
+            name, cols = _create_table(self._cur, table, data_list[0])
+            tables[table] = cols
 
-    def _to_sqlite(self):
+        if isinstance(data_list[0], dict):  # 检查是否要新增列
+            keys = data_list[0].keys()
+            for key in keys:
+                if key not in tables[table]:
+                    sql = f'ALTER TABLE {table} ADD COLUMN {key}'
+                    self._cur.execute(sql)
+                    tables[table].append(key)
+
+            question_masks = ','.join('?' * len(keys))
+            keys_txt = ','.join(keys)
+            values = [list(i.values()) for i in data_list]
+            sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
+
+        else:
+            question_masks = ','.join('?' * len(tables[table]))
+            values = data_list
+            sql = f'INSERT INTO {table} values ({question_masks})'
+
+        self._cur.executemany(sql, values)
+
+    def _record(self):
         """保存数据到sqlite"""
         # 获取所有表名和列名
         self._cur.execute("select name from sqlite_master where type='table'")
@@ -95,50 +131,37 @@ class DBRecorder(BaseRecorder):
             self._cur.execute(f"PRAGMA table_info({table[0]})")
             tables[table[0]] = [i[1] for i in self._cur.fetchall()]
 
-        # 添加数据，每个数据格式为(表名，一维或二维数据)
-        for data in self._data:
-            table = data[0]
-            data = data[1]  # 一维或二维数组
+        cols_num = len(tables[table])
+        for table, data in self._data.items():
+            data_list = []
+            if isinstance(data[0], dict):
+                curr_keys = data[0].keys()
+            else:
+                curr_keys = len(data[0])
 
-            if table not in tables:
-                d = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
-                name, cols = _create_table(self._cur, table, d)
-                tables[table] = cols
-
-            now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
-
-            for d in now_data:
+            for d in data:
                 if isinstance(d, dict):
+                    tmp_keys = d.keys()
                     d = data_to_list_or_dict(self, d)
-                    question_masks = ','.join('?' * len(d))
-                    keys = d.keys()
-
-                    for key in keys:  # 检查是否要新增列
-                        if key not in tables[table]:
-                            sql = f'ALTER TABLE {table} ADD COLUMN {key}'
-                            self._cur.execute(sql)
-                            tables[table].append(key)
-
-                    keys_txt = ','.join(keys)
-                    values = list(d.values())
-                    sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
-
                 else:
-                    d = self._data_to_list(d)
-                    long = len(d)
-                    cols_num = len(tables[table])
-                    if long > cols_num:
-                        raise RuntimeError('数据个数大于列数。')
-                    d.extend([None] * (cols_num - long))
-                    question_masks = ','.join('?' * cols_num)
+                    tmp_keys = len(d)
+                    d = self._data_to_list(d, cols_num)
 
-                    values = d
-                    sql = f'INSERT INTO {table} values ({question_masks})'
+                if tmp_keys != curr_keys:
+                    self._to_database(data_list, table, tables)
+                    curr_keys = tmp_keys
+                    data_list = []
 
-                values = [str(i) if i is not None and not isinstance(i, (str, float, int, bool)) else i for i in values]
-                self._cur.execute(sql, values)
+                data_list.append(d)
+
+            if data_list:
+                self._to_database(data_list, table, tables)
 
         self._conn.commit()
+
+    def clear(self):
+        """清空缓存"""
+        self._data = {}
 
 
 def _create_table(cursor, table_name: str, data: dict) -> tuple:
