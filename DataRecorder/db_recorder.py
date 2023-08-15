@@ -98,10 +98,6 @@ class DBRecorder(BaseRecorder):
         :param tables: 数据库中数据表和列信息
         :return: None
         """
-        if table not in tables:
-            name, cols = _create_table(self._cur, table, data_list[0])
-            tables[table] = cols
-
         if isinstance(data_list[0], dict):  # 检查是否要新增列
             keys = data_list[0].keys()
             for key in keys:
@@ -131,7 +127,6 @@ class DBRecorder(BaseRecorder):
             self._cur.execute(f"PRAGMA table_info({table[0]})")
             tables[table[0]] = [i[1] for i in self._cur.fetchall()]
 
-        cols_num = len(tables[table])
         for table, data in self._data.items():
             data_list = []
             if isinstance(data[0], dict):
@@ -143,9 +138,16 @@ class DBRecorder(BaseRecorder):
                 if isinstance(d, dict):
                     tmp_keys = d.keys()
                     d = data_to_list_or_dict(self, d)
+                    if table not in tables:
+                        keys = d.keys()
+                        self._cur.execute(f"CREATE TABLE {table} ({','.join(keys)})")
+                        tables[table] = tuple(keys)
+
                 else:
+                    if table not in tables:
+                        raise TypeError('新建表格首次须接收数据需为dict格式。')
                     tmp_keys = len(d)
-                    d = self._data_to_list(d, cols_num)
+                    d = self._data_to_list(d, len(tables[table]))
 
                 if tmp_keys != curr_keys:
                     self._to_database(data_list, table, tables)
@@ -162,19 +164,3 @@ class DBRecorder(BaseRecorder):
     def clear(self):
         """清空缓存"""
         self._data = {}
-
-
-def _create_table(cursor, table_name: str, data: dict) -> tuple:
-    """创建表格
-    :param cursor: 数据库游标对象
-    :param table_name: 表名称
-    :param data: 要添加的数据
-    :return: 表名和各列组成的元组
-    """
-    if not isinstance(data, dict):
-        raise TypeError('新建表格须接收dict格式数据。')
-
-    titles_txt = ','.join(data.keys())
-    cursor.execute(f'CREATE TABLE {table_name} ({titles_txt})')
-
-    return table_name, data.keys()
