@@ -18,11 +18,10 @@ class DBRecorder(BaseRecorder):
         """
         self._conn = None
         self._cur = None
+        self._type = 'db'
         super().__init__(None, cache_size)
         if path:
             self.set.path(path, table)
-        self._type = 'db'
-        self._data = {}
 
     @property
     def set(self):
@@ -160,7 +159,3 @@ class DBRecorder(BaseRecorder):
                 self._to_database(data_list, table, tables)
 
         self._conn.commit()
-
-    def clear(self):
-        """清空缓存"""
-        self._data = {}

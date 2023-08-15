@@ -47,9 +47,10 @@ class Recorder(BaseRecorder):
         """返回csv文件引用符"""
         return self._quote_char
 
-    def add_data(self, data):
+    def add_data(self, data, table=None):
         """添加数据，可一次添加多条数据
         :param data: 插入的数据，元组或列表
+        :param table: 要插入的数据表名称
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
@@ -59,13 +60,24 @@ class Recorder(BaseRecorder):
             data = (data,)
         if not data:
             data = (None,)
+
         # 一维数组
         if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
-            self._data.append(data)
+            data = [data]
             self._data_count += 1
         else:  # 二维数组
-            self._data.extend(data)
             self._data_count += len(data)
+
+        if self._type != 'xlsx':
+            self._data.extend(data)
+
+        
+        else:
+            table = table if table is not None else self.table
+            if table in self._data:
+                self._data[table].extend(data)
+            else:
+                self._data[table] = list(data)
 
         if 0 < self.cache_size <= self._data_count:
             self.record()
@@ -111,21 +123,22 @@ class Recorder(BaseRecorder):
             if title is not None:
                 ws.append(ok_list(title, True))
 
-        for i in self._data:
-            data = ok_list(self._data_to_list(i), True)
-            ws.append(data)
+        for table, data in self._data.items():
+            for i in data:
+                d = ok_list(self._data_to_list(i), True)
+                ws.append(d)
 
-            if self._col_height is not None:
-                ws.row_dimensions[ws.max_row].height = self._col_height
+                if self._col_height is not None:
+                    ws.row_dimensions[ws.max_row].height = self._col_height
 
-            if self._row_styles:
-                groups = zip(ws[ws.max_row], self._row_styles)
-                for g in groups:
-                    g[1].to_cell(g[0])
+                if self._row_styles:
+                    groups = zip(ws[ws.max_row], self._row_styles)
+                    for g in groups:
+                        g[1].to_cell(g[0])
 
-            elif self._style:
-                for c in ws[ws.max_row]:
-                    self._style.to_cell(c)
+                elif self._style:
+                    for c in ws[ws.max_row]:
+                        self._style.to_cell(c)
 
         wb.save(self.path)
         wb.close()

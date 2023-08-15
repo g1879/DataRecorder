@@ -60,7 +60,8 @@ class Filler(BaseRecorder):
     def quote_char(self) -> str: ...
 
     def add_data(self, data: Any,
-                 coord: Union[list, Tuple[Optional[int, str], Union[int, str]], str, int] = 'newline') -> None: ...
+                 coord: Union[list, Tuple[Optional[int, str], Union[int, str]], str, int] = 'newline',
+                 table:str = None) -> None: ...
 
     def set_link(self,
                  coord: Union[int, str, tuple, list],

@@ -104,15 +104,16 @@ class Filler(BaseRecorder):
         """返回csv文件引用符"""
         return self._quote_char
 
-    def add_data(self, data, coord='newline'):
+    def add_data(self, data, coord='newline', table=None):
         """添加数据，每次添加一行数据，可指定坐标、列号或行号
         coord只输入数字（行号）时，列号为self.data_col值，如 3；
         输入列号，或没有行号的坐标时，表示新增一行，列号为此时指定的，如'c'、',3'、(None, 3)、'None,3'；
         输入 'newline' 时，表示新增一行，列号为self.data_col值；
         输入行列坐标时，填写到该坐标，如'a3'、'3,1'、(3,1)、[3,1]；
         输入的行号列号可以是负数，代表从下往上数，-1是倒数第一行，如'a-3'、(-3, -3)
-        :param data: 要添加的内容，任意格式都可以
-        :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'。
+        :param data: 要添加的内容，任意格式
+        :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'
+        :param table: 要写入的数据表 
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
@@ -124,7 +125,16 @@ class Filler(BaseRecorder):
         if not isinstance(data, (list, tuple)):
             data = (data,)
 
-        self._data.append((coord, data))
+        if self._type != 'xlsx':
+            self._data.append((coord, data))
+
+        else:
+            table = table if table is not None else self.table
+            if table in self._data:
+                self._data[table].append((coord, data))
+            else:
+                self._data[table] = [(coord, data)]
+
         self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
 
         if 0 < self.cache_size <= self._data_count:

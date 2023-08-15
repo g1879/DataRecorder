@@ -30,6 +30,7 @@ class OriginalSetter(object):
             self._recorder.record()
 
         self._recorder._path = str(path)
+        self._recorder._data = []
 
     def show_msg(self, on_off):
         """设置是否显示运行信息
@@ -137,6 +138,8 @@ class SheetLikeSetter(BaseSetter):
 
         if file_type:
             self.file_type(file_type)
+
+        self._recorder._data = {} if self._recorder._type == 'xlsx' else []
 
     def file_type(self, file_type):
         """指定文件类型，无视文件后缀名"""
@@ -292,6 +295,8 @@ class DBSetter(BaseSetter):
         r = self._recorder.run_sql("select name from sqlite_master where type='table'")
         if r:
             self._recorder._table = r[0]
+
+        self._recorder._data = {}
 
 
 

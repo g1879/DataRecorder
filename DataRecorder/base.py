@@ -17,7 +17,7 @@ class OriginalRecorder(object):
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
-        self._data = []
+        self._data = None
         self._path = None
         self._type = None
         self._lock = Lock()
@@ -30,6 +30,7 @@ class OriginalRecorder(object):
         if path:
             self.set.path(path)
         self._cache = cache_size if cache_size is not None else 1000
+        
 
     def __del__(self):
         """对象关闭时把剩下的数据写入文件"""
@@ -131,7 +132,7 @@ class OriginalRecorder(object):
 
     def clear(self):
         """清空缓存中的数据"""
-        self._data = []
+        self._data.clear()
 
     @abstractmethod
     def add_data(self, data):
@@ -194,7 +195,7 @@ class BaseRecorder(OriginalRecorder):
         return self._encoding
 
     @abstractmethod
-    def add_data(self, data):
+    def add_data(self, data, table=None):
         pass
 
     @abstractmethod
