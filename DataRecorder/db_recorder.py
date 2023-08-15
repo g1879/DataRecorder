@@ -18,8 +18,9 @@ class DBRecorder(BaseRecorder):
         """
         self._conn = None
         self._cur = None
-        super().__init__(path, cache_size)
-        self._table = table
+        super().__init__(None, cache_size)
+        if path:
+            self.set.path(path, table)
         self._type = 'db'
 
     @property
@@ -43,14 +44,17 @@ class DBRecorder(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if not isinstance(data, (list, tuple)):
-            data = (data,)
-
         table = table or self.table
         if table is None:
             raise RuntimeError('未指定数据库表名。')
 
-        self._data.append((table, data))
+        if not isinstance(data, (list, tuple, dict)):
+            data = (data,)
+        if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
+            self._data.append((table, data))
+
+        else:
+            self._data.extend([(table, d) for d in data])
 
         if 0 < self.cache_size <= len(self._data):
             self.record()
@@ -95,46 +99,41 @@ class DBRecorder(BaseRecorder):
 
         # 添加数据，每个数据格式为(表名，一维或二维数据)
         for data in self._data:
-            table = data[0]
-            data = data[1]  # 一维或二维数组
+            table, data = data
 
             if table not in tables:
-                d = data[0][0] if isinstance(data[0], (list, tuple)) else data[0]  # 获取第一个数据
-                name, cols = _create_table(self._cur, table, d)
+                name, cols = _create_table(self._cur, table, data)
                 tables[table] = cols
 
-            now_data = (data,) if not isinstance(data[0], (list, tuple, dict)) else data
+            if isinstance(data, dict):
+                data = data_to_list_or_dict(self, data)
+                question_masks = ','.join('?' * len(data))
+                keys = data.keys()
 
-            for d in now_data:
-                if isinstance(d, dict):
-                    d = data_to_list_or_dict(self, d)
-                    question_masks = ','.join('?' * len(d))
-                    keys = d.keys()
+                for key in keys:  # 检查是否要新增列
+                    if key not in tables[table]:
+                        sql = f'ALTER TABLE {table} ADD COLUMN {key}'
+                        self._cur.execute(sql)
+                        tables[table].append(key)
 
-                    for key in keys:  # 检查是否要新增列
-                        if key not in tables[table]:
-                            sql = f'ALTER TABLE {table} ADD COLUMN {key}'
-                            self._cur.execute(sql)
-                            tables[table].append(key)
+                keys_txt = ','.join(keys)
+                values = list(data.values())
+                sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
 
-                    keys_txt = ','.join(keys)
-                    values = list(d.values())
-                    sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
+            else:
+                data = self._data_to_list(data)
+                long = len(data)
+                cols_num = len(tables[table])
+                if long > cols_num:
+                    raise RuntimeError('数据个数大于列数。')
+                data.extend([None] * (cols_num - long))
+                question_masks = ','.join('?' * cols_num)
 
-                else:
-                    d = self._data_to_list(d)
-                    long = len(d)
-                    cols_num = len(tables[table])
-                    if long > cols_num:
-                        raise RuntimeError('数据个数大于列数。')
-                    d.extend([None] * (cols_num - long))
-                    question_masks = ','.join('?' * cols_num)
+                values = data
+                sql = f'INSERT INTO {table} values ({question_masks})'
 
-                    values = d
-                    sql = f'INSERT INTO {table} values ({question_masks})'
-
-                values = [str(i) if i is not None and not isinstance(i, (str, float, int, bool)) else i for i in values]
-                self._cur.execute(sql, values)
+            values = [str(i) if i is not None and not isinstance(i, (str, float, int, bool)) else i for i in values]
+            self._cur.execute(sql, values)
 
         self._conn.commit()
 
