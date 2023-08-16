@@ -141,12 +141,18 @@ def parse_coord(coord=None, data_col=None):
 
             return_coord = x, y
 
-        else:  # 'A3'形式
+        else:  # 'A3'或'3A'形式
             m = match(r'^[$]?([A-Za-z]{1,3})[$]?(-?\d+)$', coord)
-            if not m:
-                raise ValueError('坐标格式不正确。')
-            y, x = m.groups()
-            return_coord = int(x), column_index_from_string(y)
+            if m:
+                y, x = m.groups()
+                return_coord = int(x), column_index_from_string(y)
+
+            else:
+                m = match(r'^[$]?(-?\d+)[$]?([A-Za-z]{1,3})$', coord)
+                if not m:
+                    raise ValueError(f'{coord} 坐标格式不正确。')
+                x, y = m.groups()
+                return_coord = int(x), column_index_from_string(y)
 
     elif isinstance(coord, (tuple, list)):
         if len(coord) != 2:
@@ -166,7 +172,7 @@ def parse_coord(coord=None, data_col=None):
         return_coord = x, y
 
     if not return_coord or return_coord[0] == 0 or return_coord[1] == 0:
-        raise ValueError(f'坐标{return_coord}格式不正确。')
+        raise ValueError(f'{return_coord} 坐标格式不正确。')
     return return_coord
 
 

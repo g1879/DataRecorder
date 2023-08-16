@@ -248,9 +248,6 @@ class RecorderSetter(SheetLikeSetter):
         :return: None
         """
         self._recorder._follow_styles = on_off
-        if not on_off:
-            self._recorder._row_styles = None
-            self._recorder._row_styles_len = None
 
     def col_height(self, height):
         """设置行高，只有xlsx格式有效
@@ -297,7 +294,6 @@ class DBSetter(BaseSetter):
             self._recorder._table = r[0]
 
         self._recorder._data = {}
-
 
 
 def set_csv_head(file_path, head, encoding='utf-8', delimiter=',', quote_char='"'):

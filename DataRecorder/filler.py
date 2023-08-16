@@ -113,7 +113,7 @@ class Filler(BaseRecorder):
         输入的行号列号可以是负数，代表从下往上数，-1是倒数第一行，如'a-3'、(-3, -3)
         :param data: 要添加的内容，任意格式
         :param coord: 要添加数据的坐标，可输入行号、列号或行列坐标，如'a3'、7、(3, 1)、[3, 1]、'c'
-        :param table: 要写入的数据表 
+        :param table: 要写入的数据表，仅支持xlsx格式。为None表示用set.table()方法设置的值，为bool表示活动的表格
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
@@ -172,58 +172,76 @@ class Filler(BaseRecorder):
 
     def _to_xlsx(self):
         """填写数据到xlsx文件"""
-        wb = load_workbook(self.path) if Path(self.path).exists() else Workbook()
-        if self.table:
-            ws = wb[self.table] if self.table in [i.title for i in wb.worksheets] else wb.create_sheet(title=self.table)
+        if Path(self.path).exists():
+            wb = load_workbook(self.path)
+            new = False
         else:
-            ws = wb.active
-        max_col = ws.max_column
-        empty = ws.max_column == ws.max_row == 1 and ws[1][0].value is None
+            wb = Workbook()
+            new = True
 
-        for data in self._data:
-            if empty:  # 如果是空文件，最大行数设为0，避免直接添加时出现空行
-                max_row = 0
-                empty = False
+        tables = [i.title for i in wb.worksheets]
+        for table, table_data in self._data.items():
+            if isinstance(table, bool):
+                ws = wb.active
             else:
-                max_row = ws.max_row
+                if table in tables:
+                    ws = wb[table]
+                elif new is True:
+                    new = False
+                    ws = wb.active
+                    ws.title = table
+                    tables.append(table)
+                else:
+                    ws = wb.create_sheet(title=table)
+                    tables.append(table)
 
-            if data[0] == 'set_link':
-                coord = parse_coord(data[1][0], self.data_col)
-                row, col = get_usable_coord(coord, max_row, max_col)
-                cell = ws.cell(row, col)
-                cell.hyperlink = process_content(data[1][1], True)
-                if data[1][2] is not None:
-                    cell.value = process_content(data[1][2], True)
-                if self._link_style:
-                    self._link_style.to_cell(cell, replace=False)
-                continue
+            max_col = ws.max_column
+            empty = ws.max_column == ws.max_row == 1 and ws[1][0].value is None
 
-            elif data[0] in ('replace_style', 'cover_style'):
-                mode = data[0] == 'replace_style'
-                coord = data[1][0]
-                style = NoneStyle() if data[1][1] is None else data[1][1]
-                if isinstance(coord, int) or (isinstance(coord, str) and coord.isdigit()):
-                    for c in ws[coord]:
-                        style.to_cell(c, replace=mode)
+            for data in table_data:
+                if empty:  # 如果是空文件，最大行数设为0，避免直接添加时出现空行
+                    max_row = 0
+                    empty = False
+                else:
+                    max_row = ws.max_row
+
+                if data[0] == 'set_link':
+                    coord = parse_coord(data[1][0], self.data_col)
+                    row, col = get_usable_coord(coord, max_row, max_col)
+                    cell = ws.cell(row, col)
+                    cell.hyperlink = process_content(data[1][1], True)
+                    if data[1][2] is not None:
+                        cell.value = process_content(data[1][2], True)
+                    if self._link_style:
+                        self._link_style.to_cell(cell, replace=False)
                     continue
 
-                elif isinstance(coord, str) and ':' in coord:
-                    for c in ws[coord]:
-                        for cc in c:
-                            style.to_cell(cc, replace=mode)
+                elif data[0] in ('replace_style', 'cover_style'):
+                    mode = data[0] == 'replace_style'
+                    coord = data[1][0]
+                    style = NoneStyle() if data[1][1] is None else data[1][1]
+                    if isinstance(coord, int) or (isinstance(coord, str) and coord.isdigit()):
+                        for c in ws[coord]:
+                            style.to_cell(c, replace=mode)
+                        continue
+
+                    elif isinstance(coord, str) and ':' in coord:
+                        for c in ws[coord]:
+                            for cc in c:
+                                style.to_cell(cc, replace=mode)
+                        continue
+
+                    coord = parse_coord(coord, self.data_col)
+                    row, col = get_usable_coord(coord, max_row, max_col)
+                    style.to_cell(ws.cell(row, col), replace=mode)
                     continue
 
-                coord = parse_coord(coord, self.data_col)
-                row, col = get_usable_coord(coord, max_row, max_col)
-                style.to_cell(ws.cell(row, col), replace=mode)
-                continue
+                row, col = get_usable_coord(data[0], max_row, max_col)
+                now_data = (data[1],) if not isinstance(data[1][0], (list, tuple, dict)) else data[1]
 
-            row, col = get_usable_coord(data[0], max_row, max_col)
-            now_data = (data[1],) if not isinstance(data[1][0], (list, tuple, dict)) else data[1]
-
-            for r, i in enumerate(now_data, row):
-                for key, j in enumerate(self._data_to_list(i)):
-                    ws.cell(r, col + key).value = process_content(j, True)
+                for r, i in enumerate(now_data, row):
+                    for key, j in enumerate(self._data_to_list(i)):
+                        ws.cell(r, col + key).value = process_content(j, True)
 
         wb.save(self.path)
         wb.close()

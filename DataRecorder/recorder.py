@@ -22,7 +22,6 @@ class Recorder(BaseRecorder):
         super().__init__(path=path, cache_size=cache_size)
         self._follow_styles = False
         self._row_styles = None
-        self._row_styles_len = None
 
         self._delimiter = ','  # csv文件分隔符
         self._quote_char = '"'  # csv文件引用符
@@ -49,8 +48,8 @@ class Recorder(BaseRecorder):
 
     def add_data(self, data, table=None):
         """添加数据，可一次添加多条数据
-        :param data: 插入的数据，元组或列表
-        :param table: 要插入的数据表名称
+        :param data: 插入的数据，任意格式
+        :param table: 要写入的数据表，仅支持xlsx格式。为None表示用set.table()方法设置的值，为bool表示活动的表格
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
@@ -71,7 +70,6 @@ class Recorder(BaseRecorder):
         if self._type != 'xlsx':
             self._data.extend(data)
 
-        
         else:
             table = table if table is not None else self.table
             if table in self._data:
@@ -96,43 +94,62 @@ class Recorder(BaseRecorder):
     def _to_xlsx(self):
         """记录数据到xlsx文件"""
         if Path(self.path).exists():
+            new = False
             wb = load_workbook(self.path)
-            if self.table:
-                ws = wb[self.table] if self.table in [i.title for i in wb.worksheets] else wb.create_sheet(
-                    title=self.table)
-            else:
-                ws = wb.active
-
-            if self._follow_styles and self._row_styles is None:
-                row_num = ws.max_row
-                self._row_styles = [CellStyleCopier(i) for i in ws[row_num]]
-                self._row_styles_len = len(self._row_styles)
-                self._col_height = ws.row_dimensions[row_num].height
 
         else:
-            if self._col_height or self._row_styles:
+            new = True
+            if self._col_height or self._follow_styles or self._style or len(self._data) > 1:
                 wb = Workbook(write_only=False)
-                ws = wb.active
-                if self.table:
-                    ws.title = self.table
             else:
                 wb = Workbook(write_only=True)
-                ws = wb.create_sheet(title=self.table)
 
-            title = _get_title(self._data[0], self._before, self._after)
-            if title is not None:
-                ws.append(ok_list(title, True))
-
+        tables = [i.title for i in wb.worksheets]
         for table, data in self._data.items():
+            _row_styles = None
+            _col_height = None
+            if isinstance(table, bool):
+                ws = wb.active
+                if not new and self._follow_styles:
+                    row_num = ws.max_row
+                    _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
+                    _col_height = ws.row_dimensions[row_num].height
+
+            else:
+                if table in tables:
+                    ws = wb[table]
+                    if self._follow_styles:
+                        row_num = ws.max_row
+                        _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
+                        _col_height = ws.row_dimensions[row_num].height
+
+                elif new is True:
+                    new = False
+                    ws = wb.active
+                    ws.title = table
+                    tables.append(table)
+
+                    title = _get_title(data[0], self._before, self._after)
+                    if title is not None:
+                        ws.append(ok_list(title, True))
+
+                else:
+                    ws = wb.create_sheet(title=table)
+                    tables.append(table)
+
+                    title = _get_title(data[0], self._before, self._after)
+                    if title is not None:
+                        ws.append(ok_list(title, True))
+
             for i in data:
                 d = ok_list(self._data_to_list(i), True)
                 ws.append(d)
 
-                if self._col_height is not None:
+                if _col_height is not None:
                     ws.row_dimensions[ws.max_row].height = self._col_height
 
-                if self._row_styles:
-                    groups = zip(ws[ws.max_row], self._row_styles)
+                if _row_styles:
+                    groups = zip(ws[ws.max_row], _row_styles)
                     for g in groups:
                         g[1].to_cell(g[0])
 
