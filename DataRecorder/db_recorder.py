@@ -45,7 +45,7 @@ class DBRecorder(BaseRecorder):
             sleep(.1)
 
         table = table or self.table
-        if table is None:
+        if not isinstance(table, str):
             raise RuntimeError('未指定数据库表名。')
 
         if table not in self._data:

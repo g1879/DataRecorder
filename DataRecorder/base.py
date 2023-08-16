@@ -66,11 +66,10 @@ class OriginalRecorder(object):
     def record(self, new_path=None):
         """记录数据，可保存到新文件
         :param new_path: 文件另存为的路径，会保存新文件
-        :return: 成功返回文件路径，失败返回未保存的数据
+        :return: 文件路径
         """
         # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
         original_path = return_path = self._path
-        return_data = None
         if new_path:
             new_path = str(get_usable_path(new_path))
             return_path = self._path = new_path
@@ -88,7 +87,7 @@ class OriginalRecorder(object):
         with self._lock:
             self._pause_add = True  # 写入文件前暂缓接收数据
             if self.show_msg:
-                print(f'{self.path} 开始写入文件，切勿关闭进程')
+                print(f'{self.path} 开始写入文件，切勿关闭进程。')
 
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
             while True:
@@ -102,17 +101,12 @@ class OriginalRecorder(object):
 
                 except PermissionError:
                     if self.show_msg:
-                        print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                        print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
 
                 except Exception as e:
-                    if self._data:
-                        if self.show_msg:
-                            print(f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n'
-                                  f'错误信息：{e}\n'
-                                  f'提醒：请显式调用record()保存数据。\n{"=" * 30}')
-                            raise
-                        return_data = self._data.copy()
-                    break
+                    if 'Python is likely shutting down' in str(e):
+                        print(f'{"=" * 30}\n请显式调用record()保存数据。\n{"=" * 30}')
+                    raise
 
                 finally:
                     self._pause_write = False
@@ -122,13 +116,13 @@ class OriginalRecorder(object):
             if new_path:
                 self._path = original_path
 
-            if self.show_msg and not return_data:
-                print(f'{self.path} 写入文件结束')
+            if self.show_msg:
+                print(f'{self.path} 写入文件结束。')
             self.clear()
             self._data_count = 0
             self._pause_add = False
 
-        return return_data if return_data else return_path
+        return return_path
 
     def clear(self):
         """清空缓存中的数据"""
@@ -152,7 +146,7 @@ class OriginalRecorder(object):
 
 
 class BaseRecorder(OriginalRecorder):
-    """Recorder和Filler的父类"""
+    """Recorder、Filler和DBRecorder的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self, path=None, cache_size=None):
@@ -165,7 +159,7 @@ class BaseRecorder(OriginalRecorder):
         self._after = []
 
         self._encoding = 'utf-8'
-        self._table = None
+        self._table = True
 
     @property
     def set(self):
