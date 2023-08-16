@@ -287,11 +287,10 @@ class DBSetter(BaseSetter):
 
         if table:
             self._recorder._table = table
-            return
 
-        r = self._recorder.run_sql("select name from sqlite_master where type='table'")
-        if r:
-            self._recorder._table = r[0]
+        else：
+            r = self._recorder.run_sql("select name from sqlite_master where type='table'")
+            self._recorder._table = r[0] if r else True
 
         self._recorder._data = {}
 

@@ -157,7 +157,6 @@ class BaseRecorder(OriginalRecorder):
         super().__init__(path, cache_size)
         self._before = []
         self._after = []
-
         self._encoding = 'utf-8'
         self._table = True
 
