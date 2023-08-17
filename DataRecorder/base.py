@@ -30,7 +30,6 @@ class OriginalRecorder(object):
         if path:
             self.set.path(path)
         self._cache = cache_size if cache_size is not None else 1000
-        
 
     def __del__(self):
         """对象关闭时把剩下的数据写入文件"""
@@ -158,7 +157,7 @@ class BaseRecorder(OriginalRecorder):
         self._before = []
         self._after = []
         self._encoding = 'utf-8'
-        self._table = True
+        self._table = None
 
     @property
     def set(self):
@@ -216,7 +215,7 @@ class BaseRecorder(OriginalRecorder):
                 return_list.extend(list(i))
             else:
                 return_list.extend([str(i)])
-        
+
         if long:
             l = len(return_list)
             if long > l:

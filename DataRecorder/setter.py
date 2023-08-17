@@ -147,6 +147,15 @@ class SheetLikeSetter(BaseSetter):
             raise TypeError(f'只支持{"、".join(self._recorder.SUPPORTS)}格式文件。')
         self._recorder._type = file_type
 
+    def table(self, name):
+        """设置默认表名
+        :param name: 表名
+        :return: None
+        """
+        if isinstance(name, bool):
+            name = None
+        self._recorder._table = name
+
 
 class FillerSetter(SheetLikeSetter):
     def sign(self, value):
@@ -288,9 +297,9 @@ class DBSetter(BaseSetter):
         if table:
             self._recorder._table = table
 
-        else：
+        else:
             r = self._recorder.run_sql("select name from sqlite_master where type='table'")
-            self._recorder._table = r[0] if r else True
+            self._recorder._table = r[0] if r else None
 
         self._recorder._data = {}
 

@@ -129,11 +129,12 @@ class Filler(BaseRecorder):
             self._data.append((coord, data))
 
         else:
-            table = table if table is not None else self.table
-            if table in self._data:
-                self._data[table].append((coord, data))
-            else:
-                self._data[table] = [(coord, data)]
+            if table is None:
+                table = self._table
+            elif isinstance(table, bool):
+                table = None
+
+            self._data.setdefault(table, []).extend((coord, data))
 
         self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
 
@@ -181,8 +182,9 @@ class Filler(BaseRecorder):
 
         tables = [i.title for i in wb.worksheets]
         for table, table_data in self._data.items():
-            if isinstance(table, bool):
+            if table is None:
                 ws = wb.active
+
             else:
                 if table in tables:
                     ws = wb[table]

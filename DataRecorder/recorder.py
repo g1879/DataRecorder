@@ -20,12 +20,9 @@ class Recorder(BaseRecorder):
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
         super().__init__(path=path, cache_size=cache_size)
-        self._follow_styles = False
-        self._row_styles = None
-
         self._delimiter = ','  # csv文件分隔符
         self._quote_char = '"'  # csv文件引用符
-
+        self._follow_styles = False
         self._col_height = None
         self._style = None
 
@@ -71,11 +68,12 @@ class Recorder(BaseRecorder):
             self._data.extend(data)
 
         else:
-            table = table if table is not None else self.table
-            if table in self._data:
-                self._data[table].extend(data)
-            else:
-                self._data[table] = list(data)
+            if table is None:
+                table = self._table
+            elif isinstance(table, bool):
+                table = None
+
+            self._data.setdefault(table, []).extend(data)
 
         if 0 < self.cache_size <= self._data_count:
             self.record()
@@ -94,52 +92,51 @@ class Recorder(BaseRecorder):
     def _to_xlsx(self):
         """记录数据到xlsx文件"""
         if Path(self.path).exists():
-            new = False
+            new_file = False
             wb = load_workbook(self.path)
 
         else:
-            new = True
+            new_file = True
             if self._col_height or self._follow_styles or self._style or len(self._data) > 1:
                 wb = Workbook(write_only=False)
             else:
                 wb = Workbook(write_only=True)
+                wb.create_sheet('Sheet1')
 
         tables = [i.title for i in wb.worksheets]
         for table, data in self._data.items():
             _row_styles = None
             _col_height = None
-            if isinstance(table, bool):
+            new_sheet = False
+
+            if table is None:
                 ws = wb.active
-                if not new and self._follow_styles:
-                    row_num = ws.max_row
-                    _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
-                    _col_height = ws.row_dimensions[row_num].height
+
+            elif table in tables:
+                ws = wb[table]
+
+            elif new_file:
+                ws = wb.active
+                tables.remove(ws.title)
+                ws.title = table
+                tables.append(table)
+                new_sheet = True
 
             else:
-                if table in tables:
-                    ws = wb[table]
-                    if self._follow_styles:
-                        row_num = ws.max_row
-                        _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
-                        _col_height = ws.row_dimensions[row_num].height
+                ws = wb.create_sheet(title=table)
+                tables.append(table)
+                new_sheet = True
 
-                elif new is True:
-                    new = False
-                    ws = wb.active
-                    ws.title = table
-                    tables.append(table)
+            if new_file or new_sheet:
+                new_file = False
+                _add_title(ws, data[0], self._before, self._after)
 
-                    title = _get_title(data[0], self._before, self._after)
-                    if title is not None:
-                        ws.append(ok_list(title, True))
+            elif self._follow_styles:
+                row_num = ws.max_row
+                _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
+                _col_height = ws.row_dimensions[row_num].height
 
-                else:
-                    ws = wb.create_sheet(title=table)
-                    tables.append(table)
-
-                    title = _get_title(data[0], self._before, self._after)
-                    if title is not None:
-                        ws.append(ok_list(title, True))
+            # ====================================
 
             for i in data:
                 d = ok_list(self._data_to_list(i), True)
@@ -193,6 +190,13 @@ class Recorder(BaseRecorder):
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
+
+
+def _add_title(ws, data, before, after):
+    """向空sheet添加表头"""
+    title = _get_title(data, before, after)
+    if title is not None:
+        ws.append(ok_list(title, True))
 
 
 def _get_title(data: Union[list, dict],

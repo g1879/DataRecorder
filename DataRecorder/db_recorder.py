@@ -48,19 +48,16 @@ class DBRecorder(BaseRecorder):
         if not isinstance(table, str):
             raise RuntimeError('未指定数据库表名。')
 
-        if table not in self._data:
-            self._data[table] = []
-
         if not isinstance(data, (list, tuple, dict)):
             data = (data,)
 
         # 一维数组
         if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
             self._data_count += 1
-            self._data[table].append(data)
+            self._data.setdefault(table, []).append(data)
 
         else:  # 二维数组
-            self._data[table].extend(data)
+            self._data.setdefault(table, []).extend(data)
             self._data_count += len(data)
 
         if 0 < self.cache_size <= self._data_count:
