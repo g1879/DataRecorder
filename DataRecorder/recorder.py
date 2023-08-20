@@ -20,13 +20,9 @@ class Recorder(BaseRecorder):
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
         super().__init__(path=path, cache_size=cache_size)
-        self._follow_styles = False
-        self._row_styles = None
-        self._row_styles_len = None
-
         self._delimiter = ','  # csv文件分隔符
         self._quote_char = '"'  # csv文件引用符
-
+        self._follow_styles = False
         self._col_height = None
         self._style = None
 
@@ -47,9 +43,10 @@ class Recorder(BaseRecorder):
         """返回csv文件引用符"""
         return self._quote_char
 
-    def add_data(self, data):
+    def add_data(self, data, table=None):
         """添加数据，可一次添加多条数据
-        :param data: 插入的数据，元组或列表
+        :param data: 插入的数据，任意格式
+        :param table: 要写入的数据表，仅支持xlsx格式。为None表示用set.table()方法设置的值，为bool表示活动的表格
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
@@ -59,13 +56,26 @@ class Recorder(BaseRecorder):
             data = (data,)
         if not data:
             data = (None,)
+
         # 一维数组
         if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
-            self._data.append(data)
+            data = [data]
+            self._data_count += 1
         else:  # 二维数组
+            self._data_count += len(data)
+
+        if self._type != 'xlsx':
             self._data.extend(data)
 
-        if 0 < self.cache_size <= len(self._data):
+        else:
+            if table is None:
+                table = self._table
+            elif isinstance(table, bool):
+                table = None
+
+            self._data.setdefault(table, []).extend(data)
+
+        if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def _record(self):
@@ -82,48 +92,67 @@ class Recorder(BaseRecorder):
     def _to_xlsx(self):
         """记录数据到xlsx文件"""
         if Path(self.path).exists():
+            new_file = False
             wb = load_workbook(self.path)
-            if self.table:
-                ws = wb[self.table] if self.table in [i.title for i in wb.worksheets] else wb.create_sheet(
-                    title=self.table)
-            else:
-                ws = wb.active
-
-            if self._follow_styles and self._row_styles is None:
-                row_num = ws.max_row
-                self._row_styles = [CellStyleCopier(i) for i in ws[row_num]]
-                self._row_styles_len = len(self._row_styles)
-                self._col_height = ws.row_dimensions[row_num].height
 
         else:
-            if self._col_height or self._row_styles:
+            new_file = True
+            if self._col_height or self._follow_styles or self._style or len(self._data) > 1:
                 wb = Workbook(write_only=False)
-                ws = wb.active
-                if self.table:
-                    ws.title = self.table
             else:
                 wb = Workbook(write_only=True)
-                ws = wb.create_sheet(title=self.table)
+                wb.create_sheet('Sheet1')
 
-            title = _get_title(self._data[0], self._before, self._after)
-            if title is not None:
-                ws.append(ok_list(title, True))
+        tables = [i.title for i in wb.worksheets]
+        for table, data in self._data.items():
+            _row_styles = None
+            _col_height = None
+            new_sheet = False
 
-        for i in self._data:
-            data = ok_list(self._data_to_list(i), True)
-            ws.append(data)
+            if table is None:
+                ws = wb.active
 
-            if self._col_height is not None:
-                ws.row_dimensions[ws.max_row].height = self._col_height
+            elif table in tables:
+                ws = wb[table]
 
-            if self._row_styles:
-                groups = zip(ws[ws.max_row], self._row_styles)
-                for g in groups:
-                    g[1].to_cell(g[0])
+            elif new_file:
+                ws = wb.active
+                tables.remove(ws.title)
+                ws.title = table
+                tables.append(table)
+                new_sheet = True
 
-            elif self._style:
-                for c in ws[ws.max_row]:
-                    self._style.to_cell(c)
+            else:
+                ws = wb.create_sheet(title=table)
+                tables.append(table)
+                new_sheet = True
+
+            if new_file or new_sheet:
+                new_file = False
+                _add_title(ws, data[0], self._before, self._after)
+
+            elif self._follow_styles:
+                row_num = ws.max_row
+                _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
+                _col_height = ws.row_dimensions[row_num].height
+
+            # ====================================
+
+            for i in data:
+                d = ok_list(self._data_to_list(i), True)
+                ws.append(d)
+
+                if _col_height is not None:
+                    ws.row_dimensions[ws.max_row].height = self._col_height
+
+                if _row_styles:
+                    groups = zip(ws[ws.max_row], _row_styles)
+                    for g in groups:
+                        g[1].to_cell(g[0])
+
+                elif self._style:
+                    for c in ws[ws.max_row]:
+                        self._style.to_cell(c)
 
         wb.save(self.path)
         wb.close()
@@ -161,6 +190,13 @@ class Recorder(BaseRecorder):
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
+
+
+def _add_title(ws, data, before, after):
+    """向空sheet添加表头"""
+    title = _get_title(data, before, after)
+    if title is not None:
+        ws.append(ok_list(title, True))
 
 
 def _get_title(data: Union[list, dict],

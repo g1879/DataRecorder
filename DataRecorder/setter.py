@@ -30,6 +30,7 @@ class OriginalSetter(object):
             self._recorder.record()
 
         self._recorder._path = str(path)
+        self._recorder._data = []
 
     def show_msg(self, on_off):
         """设置是否显示运行信息
@@ -138,11 +139,22 @@ class SheetLikeSetter(BaseSetter):
         if file_type:
             self.file_type(file_type)
 
+        self._recorder._data = {} if self._recorder._type == 'xlsx' else []
+
     def file_type(self, file_type):
         """指定文件类型，无视文件后缀名"""
         if 'any' not in self._recorder.SUPPORTS and file_type not in self._recorder.SUPPORTS:
             raise TypeError(f'只支持{"、".join(self._recorder.SUPPORTS)}格式文件。')
         self._recorder._type = file_type
+
+    def table(self, name):
+        """设置默认表名
+        :param name: 表名
+        :return: None
+        """
+        if isinstance(name, bool):
+            name = None
+        self._recorder._table = name
 
 
 class FillerSetter(SheetLikeSetter):
@@ -245,9 +257,6 @@ class RecorderSetter(SheetLikeSetter):
         :return: None
         """
         self._recorder._follow_styles = on_off
-        if not on_off:
-            self._recorder._row_styles = None
-            self._recorder._row_styles_len = None
 
     def col_height(self, height):
         """设置行高，只有xlsx格式有效
@@ -287,11 +296,12 @@ class DBSetter(BaseSetter):
 
         if table:
             self._recorder._table = table
-            return
 
-        r = self._recorder.run_sql("select name from sqlite_master where type='table'")
-        if r:
-            self._recorder._table = r[0]
+        else:
+            r = self._recorder.run_sql("select name from sqlite_master where type='table'")
+            self._recorder._table = r[0] if r else None
+
+        self._recorder._data = {}
 
 
 def set_csv_head(file_path, head, encoding='utf-8', delimiter=',', quote_char='"'):

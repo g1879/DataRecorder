@@ -17,7 +17,7 @@ class OriginalRecorder(object):
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，0为不自动写入
         """
-        self._data = []
+        self._data = None
         self._path = None
         self._type = None
         self._lock = Lock()
@@ -25,6 +25,7 @@ class OriginalRecorder(object):
         self._pause_write = False  # 标记文件正在被一个线程写入
         self.show_msg = True
         self._setter = None
+        self._data_count = 0  # 已缓存数据的条数
 
         if path:
             self.set.path(path)
@@ -64,11 +65,10 @@ class OriginalRecorder(object):
     def record(self, new_path=None):
         """记录数据，可保存到新文件
         :param new_path: 文件另存为的路径，会保存新文件
-        :return: 成功返回文件路径，失败返回未保存的数据
+        :return: 文件路径
         """
         # 具体功能由_record()实现，本方法实现自动重试及另存文件功能
         original_path = return_path = self._path
-        return_data = None
         if new_path:
             new_path = str(get_usable_path(new_path))
             return_path = self._path = new_path
@@ -86,7 +86,7 @@ class OriginalRecorder(object):
         with self._lock:
             self._pause_add = True  # 写入文件前暂缓接收数据
             if self.show_msg:
-                print(f'{self.path} 开始写入文件，切勿关闭进程')
+                print(f'{self.path} 开始写入文件，切勿关闭进程。')
 
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
             while True:
@@ -100,17 +100,12 @@ class OriginalRecorder(object):
 
                 except PermissionError:
                     if self.show_msg:
-                        print('\r文件被打开，保存失败，请关闭，程序会自动重试...', end='')
+                        print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
 
                 except Exception as e:
-                    if self._data:
-                        if self.show_msg:
-                            print(f'{"=" * 30}\n{self._data}\n\n自动写入失败，以上数据未保存。\n'
-                                  f'错误信息：{e}\n'
-                                  f'提醒：请显式调用record()保存数据。\n{"=" * 30}')
-                            raise
-                        return_data = self._data.copy()
-                    break
+                    if 'Python is likely shutting down' in str(e):
+                        print(f'{"=" * 30}\n请显式调用record()保存数据。\n{"=" * 30}')
+                    raise
 
                 finally:
                     self._pause_write = False
@@ -120,16 +115,17 @@ class OriginalRecorder(object):
             if new_path:
                 self._path = original_path
 
-            if self.show_msg and not return_data:
-                print(f'{self.path} 写入文件结束')
-            self._data = []
+            if self.show_msg:
+                print(f'{self.path} 写入文件结束。')
+            self.clear()
+            self._data_count = 0
             self._pause_add = False
 
-        return return_data if return_data else return_path
+        return return_path
 
     def clear(self):
         """清空缓存中的数据"""
-        self._data = []
+        self._data.clear()
 
     @abstractmethod
     def add_data(self, data):
@@ -149,7 +145,7 @@ class OriginalRecorder(object):
 
 
 class BaseRecorder(OriginalRecorder):
-    """Recorder和Filler的父类"""
+    """Recorder、Filler和DBRecorder的父类"""
     SUPPORTS = ('xlsx', 'csv')
 
     def __init__(self, path=None, cache_size=None):
@@ -160,7 +156,6 @@ class BaseRecorder(OriginalRecorder):
         super().__init__(path, cache_size)
         self._before = []
         self._after = []
-
         self._encoding = 'utf-8'
         self._table = None
 
@@ -192,16 +187,17 @@ class BaseRecorder(OriginalRecorder):
         return self._encoding
 
     @abstractmethod
-    def add_data(self, data):
+    def add_data(self, data, table=None):
         pass
 
     @abstractmethod
     def _record(self):
         pass
 
-    def _data_to_list(self, data):
+    def _data_to_list(self, data, long=None):
         """将传入的数据转换为列表形式，添加前后列数据
         :param data: 要处理的数据
+        :param long: 数据总长度，不够的位数用None补足
         :return: 转变成列表方式的数据
         """
         return_list = []
@@ -219,6 +215,13 @@ class BaseRecorder(OriginalRecorder):
                 return_list.extend(list(i))
             else:
                 return_list.extend([str(i)])
+
+        if long:
+            l = len(return_list)
+            if long > l:
+                return_list.extend([None] * (long - l))
+            elif long < l:
+                raise RuntimeError('数据个数大于列数（注意before和after）。')
 
         return return_list
 

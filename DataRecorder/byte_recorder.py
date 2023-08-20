@@ -23,7 +23,7 @@ class ByteRecorder(OriginalRecorder):
         :return: None
         """
         while self._pause_add:  # 等待其它线程写入结束
-            sleep(.2)
+            sleep(.1)
 
         if not isinstance(data, bytes):
             raise TypeError('只能接受bytes类型数据。')
@@ -31,8 +31,9 @@ class ByteRecorder(OriginalRecorder):
             raise ValueError('seek参数只能接受None或大于等于0的整数。')
 
         self._data.append((data, seek))
+        self._data_count += 1
 
-        if 0 < self.cache_size <= len(self._data):
+        if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def _record(self):
