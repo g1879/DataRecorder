@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union, Any, Optional
 
 from .base import OriginalRecorder, BaseRecorder
-from .cell_style import CellStyle
+from .style import CellStyle
 from .db_recorder import DBRecorder
 from .filler import Filler
 from .recorder import Recorder

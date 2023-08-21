@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union, List, Any, Tuple, Optional
 
 from .base import BaseRecorder
-from .style.cell_style import CellStyle
+from .style import CellStyle
 from .setter import FillerSetter
 
 
@@ -72,6 +72,13 @@ class Filler(BaseRecorder):
 
     def set_style(self, coord: Union[int, str, tuple, list], style: Optional[CellStyle],
                   replace: bool = True) -> None: ...
+
+    def set_img(self, coord: Union[int, str, tuple, list], img_path: Optional[str, Path], width: float = None,
+                height: float = None) -> None: ...
+
+    def set_row_height(self, row: int, height: float) -> None: ...
+
+    def set_col_width(self, col: Union[int, str], width: float) -> None: ...
 
     def _record(self) -> None: ...
 

@@ -5,6 +5,7 @@ from time import sleep
 from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
 
 from .base import BaseRecorder
 from .style.cell_style import CellStyle, NoneStyle
@@ -119,7 +120,7 @@ class Filler(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if coord not in ('set_link', 'cover_style', 'replace_style'):
+        if coord not in ('set_link', 'cover_style', 'replace_style', 'set_img', 'set_width', 'set_height'):
             coord = parse_coord(coord, self.data_col)
 
         if not isinstance(data, (list, tuple)):
@@ -134,7 +135,7 @@ class Filler(BaseRecorder):
             elif isinstance(table, bool):
                 table = None
 
-            self._data.setdefault(table, []).extend((coord, data))
+            self._data.setdefault(table, []).append((coord, data))
 
         self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
 
@@ -163,6 +164,36 @@ class Filler(BaseRecorder):
         """
         s = 'replace_style' if replace else 'cover_style'
         self.add_data((coord, style), s)
+
+    def set_img(self, coord, img_path, width=None, height=None):
+        """
+        :param coord: 单元格坐标，输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围
+        :param img_path: 图片路径
+        :param width: 图片宽
+        :param height: 图片高
+        :return: None
+        """
+        if isinstance(img_path, Path):
+            img_path = str(img_path)
+        self.add_data((coord, img_path, width, height), 'set_img')
+
+    def set_row_height(self, row, height):
+        """设置行高
+        :param row: 行号
+        :param height: 行高
+        :return: None
+        """
+        self.add_data((row, height), 'set_height')
+
+    def set_col_width(self, col, width):
+        """设置列宽
+        :param col: 列号，数字或字母
+        :param width: 列宽
+        :return: None
+        """
+        if isinstance(col, int):
+            col = get_column_letter(col)
+        self.add_data((col, width), 'set_width')
 
     def _record(self):
         """记录数据"""
@@ -238,6 +269,41 @@ class Filler(BaseRecorder):
                     style.to_cell(ws.cell(row, col), replace=mode)
                     continue
 
+                elif data[0] == 'set_img':
+                    coord, img_path, width, height = data[1]
+                    coord = parse_coord(coord, self.data_col)
+                    row, col = get_usable_coord(coord, max_row, max_col)
+
+                    ws._images.clear()
+                    if img_path is None:
+                        continue
+
+                    from openpyxl.drawing.image import Image
+                    from openpyxl.utils import get_column_letter
+                    img = Image(img_path)
+                    if width and height:
+                        img.width = width
+                        img.height = height
+                    elif width:
+                        img.height = int(img.height * (width / img.width))
+                        img.width = width
+                    elif height:
+                        img.width = int(img.width * (height / img.height))
+                        img.height = height
+                    col = get_column_letter(col)
+                    ws.add_image(img, f'{col}{row}')
+                    continue
+
+                elif data[0] == 'set_width':
+                    col, width = data[1]
+                    ws.column_dimensions[col].width = width
+                    continue
+
+                elif data[0] == 'set_height':
+                    row, height = data[1]
+                    ws.row_dimensions[row].height = height
+                    continue
+
                 row, col = get_usable_coord(data[0], max_row, max_col)
                 now_data = (data[1],) if not isinstance(data[1][0], (list, tuple, dict)) else data[1]
 
@@ -264,7 +330,7 @@ class Filler(BaseRecorder):
                     coord = parse_coord(i[1][0], self.data_col)
                     now_data = (f'=HYPERLINK("{i[1][1]}","{i[1][2] or i[1][1]}")',)
 
-                elif i[0] in ('cover_style', 'replace_style'):
+                elif i[0] in ('cover_style', 'replace_style', 'set_img', 'set_width', 'set_height'):
                     continue
 
                 else:

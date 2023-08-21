@@ -214,7 +214,7 @@ def get_usable_coord(coord, max_row, max_col):
     :param coord: 已初步格式化的坐标，如(1, 2)、(None, 3)、(-3, -2)
     :param max_row: 文件最大行
     :param max_col: 文件最大列
-    :return: 真正写入文件的坐标
+    :return: 真正写入文件的坐标，tuple格式
     """
     row, col = coord
     if col < 0:

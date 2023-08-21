@@ -102,9 +102,7 @@ class OriginalRecorder(object):
                     if self.show_msg:
                         print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
 
-                except Exception as e:
-                    if 'Python is likely shutting down' in str(e):
-                        print(f'{"=" * 30}\n请显式调用record()保存数据。\n{"=" * 30}')
+                except Exception:
                     raise
 
                 finally:
