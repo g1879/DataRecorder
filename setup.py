@@ -6,7 +6,7 @@ with open("README.md", "r", encoding='utf-8') as fh:
 
 setup(
     name="DataRecorder",
-    version="3.4.5",
+    version="3.4.8",
     author="g1879",
     author_email="g1879@qq.com",
     description="用于记录数据的模块。",

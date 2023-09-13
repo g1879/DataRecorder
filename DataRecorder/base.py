@@ -102,7 +102,13 @@ class OriginalRecorder(object):
                     if self.show_msg:
                         print('\r文件被打开，保存失败，请关闭，程序会自动重试。', end='')
 
-                except Exception:
+                except Exception as e:
+                    try:
+                        with open('failed_data.txt', 'a+', encoding='utf-8') as f:
+                            f.write(str(self.data) + '\n')
+                        print('保存失败的数据已保存到failed_data.txt。')
+                    except:
+                        raise e
                     raise
 
                 finally:
@@ -123,7 +129,8 @@ class OriginalRecorder(object):
 
     def clear(self):
         """清空缓存中的数据"""
-        self._data.clear()
+        if self._data:
+            self._data.clear()
 
     @abstractmethod
     def add_data(self, data):
@@ -191,37 +198,6 @@ class BaseRecorder(OriginalRecorder):
     @abstractmethod
     def _record(self):
         pass
-
-    def _data_to_list(self, data, long=None):
-        """将传入的数据转换为列表形式，添加前后列数据
-        :param data: 要处理的数据
-        :param long: 数据总长度，不够的位数用None补足
-        :return: 转变成列表方式的数据
-        """
-        return_list = []
-        if data is not None and not isinstance(data, (list, tuple, dict)):
-            data = [data]
-
-        for i in (self.before, data, self.after):
-            if isinstance(i, dict):
-                return_list.extend(list(i.values()))
-            elif i is None:
-                pass
-            elif isinstance(i, list):
-                return_list.extend(i)
-            elif isinstance(i, tuple):
-                return_list.extend(list(i))
-            else:
-                return_list.extend([str(i)])
-
-        if long:
-            l = len(return_list)
-            if long > l:
-                return_list.extend([None] * (long - l))
-            elif long < l:
-                raise RuntimeError('数据个数大于列数（注意before和after）。')
-
-        return return_list
 
     # ---------------即将废弃--------------------
     def set_before(self, before):

@@ -8,7 +8,7 @@ from openpyxl import Workbook, load_workbook
 from .base import BaseRecorder
 from .style.cell_style import CellStyleCopier
 from .setter import RecorderSetter
-from .tools import ok_list, data_to_list_or_dict
+from .tools import ok_list, data_to_list_or_dict, process_content
 
 
 class Recorder(BaseRecorder):
@@ -25,6 +25,7 @@ class Recorder(BaseRecorder):
         self._follow_styles = False
         self._col_height = None
         self._style = None
+        self._fit_head = False
 
     @property
     def set(self):
@@ -54,14 +55,19 @@ class Recorder(BaseRecorder):
 
         if not isinstance(data, (list, tuple, dict)):
             data = (data,)
+
         if not data:
-            data = (None,)
+            data = ([],)
+            self._data_count += 1
 
         # 一维数组
-        if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
-            data = [data]
+        elif isinstance(data, dict) or (
+                isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))):
+            data = [data_to_list_or_dict(self, data)]
             self._data_count += 1
+
         else:  # 二维数组
+            data = [data_to_list_or_dict(self, d) for d in data]
             self._data_count += len(data)
 
         if self._type != 'xlsx':
@@ -129,50 +135,80 @@ class Recorder(BaseRecorder):
 
             if new_file or new_sheet:
                 new_file = False
-                _add_title(ws, data[0], self._before, self._after)
+                title = _get_title(data[0], self._before, self._after)
+                if title is not None:
+                    ws.append(ok_list(title, True))
 
             elif self._follow_styles:
                 row_num = ws.max_row
                 _row_styles = [CellStyleCopier(i) for i in ws[row_num]]
                 _col_height = ws.row_dimensions[row_num].height
+                title = [r.value for r in ws[1]]
+
+            else:
+                title = [r.value for r in ws[1]]
+
+            if self._fit_head and not self._head.get(ws.title, None) and any(title):
+                self._head[ws.title] = title
 
             # ====================================
 
-            for i in data:
-                d = ok_list(self._data_to_list(i), True)
-                ws.append(d)
+            if self._fit_head and self._head.get(ws.title, None):
+                for i in data:
+                    if isinstance(i, dict):
+                        i = [i.get(h, None) for h in self._head[ws.title]]
 
-                if _col_height is not None:
-                    ws.row_dimensions[ws.max_row].height = self._col_height
+                    ws.append(ok_list(i, True))
+                    _set_style(_col_height, _row_styles, ws, self)
 
-                if _row_styles:
-                    groups = zip(ws[ws.max_row], _row_styles)
-                    for g in groups:
-                        g[1].to_cell(g[0])
-
-                elif self._style:
-                    for c in ws[ws.max_row]:
-                        self._style.to_cell(c)
+            else:
+                for i in data:
+                    ws.append(ok_list(i, True))
+                    _set_style(_col_height, _row_styles, ws, self)
 
         wb.save(self.path)
         wb.close()
 
     def _to_csv(self):
         """记录数据到csv文件"""
-        from csv import writer
-        title = _get_title(self._data[0], self._before, self._after) if not Path(self.path).exists() else None
+        if Path(self.path).exists():
+            title = None
+            if self._fit_head and not self._head:
+                from csv import reader
+                with open(self.path, 'r', newline='', encoding=self.encoding) as f:
+                    u = reader(f, delimiter=self.delimiter, quotechar=self.quote_char)
+                    try:
+                        self._head = next(u)
+                    except StopIteration:
+                        pass
+
+        else:
+            title = _get_title(self._data[0], self._before, self._after)
+            if self._fit_head:
+                self._head = title
 
         with open(self.path, 'a+', newline='', encoding=self.encoding) as f:
+            from csv import writer
             csv_write = writer(f, delimiter=self.delimiter, quotechar=self.quote_char)
             if title:
                 csv_write.writerow(ok_list(title))
-            for i in self._data:
-                csv_write.writerow(ok_list(self._data_to_list(i)))
+
+            if self._fit_head and self._head:
+                for i in self._data:
+                    d = data_to_list_or_dict(self, i)
+                    if isinstance(d, dict):
+                        d = [d.get(h, None) for h in self._head]
+
+                    csv_write.writerow(ok_list(d))
+
+            else:
+                for i in self._data:
+                    csv_write.writerow(ok_list(i))
 
     def _to_txt(self):
         """记录数据到txt文件"""
         with open(self.path, 'a+', encoding=self.encoding) as f:
-            all_data = [' '.join(ok_list(data_to_list_or_dict(self, i), as_str=True)) for i in self._data]
+            all_data = [' '.join(ok_list(i, as_str=True)) for i in self._data]
             f.write('\n'.join(all_data) + '\n')
 
     def _to_json(self):
@@ -183,20 +219,38 @@ class Recorder(BaseRecorder):
                 json_data = load(f)
 
             for i in self._data:
-                json_data.append(ok_list(data_to_list_or_dict(self, i)))
+                if isinstance(i, dict):
+                    for d in i:
+                        i[d] = process_content(i[d])
+                    json_data.append(i)
+                else:
+                    json_data.append([process_content(d) for d in i])
 
         else:
-            json_data = [ok_list(data_to_list_or_dict(self, i)) for i in self._data]
+            for i in self._data:
+                if isinstance(i, dict):
+                    for d in i:
+                        i[d] = process_content(i[d])
+                    json_data = i
+                else:
+                    json_data = [process_content(d) for d in i]
 
         with open(self.path, 'w', encoding=self.encoding) as f:
             dump(json_data, f)
 
 
-def _add_title(ws, data, before, after):
-    """向空sheet添加表头"""
-    title = _get_title(data, before, after)
-    if title is not None:
-        ws.append(ok_list(title, True))
+def _set_style(_col_height, _row_styles, ws, recorder):
+    if _col_height is not None:
+        ws.row_dimensions[ws.max_row].height = recorder._col_height
+
+    if _row_styles:
+        groups = zip(ws[ws.max_row], _row_styles)
+        for g in groups:
+            g[1].to_cell(g[0])
+
+    elif recorder._style:
+        for c in ws[ws.max_row]:
+            recorder._style.to_cell(c)
 
 
 def _get_title(data: Union[list, dict],

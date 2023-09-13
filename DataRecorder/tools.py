@@ -233,13 +233,35 @@ def get_usable_coord(coord, max_row, max_col):
 
 
 def data_to_list_or_dict(recorder, data):
-    """将传入的数据转换为列表或字典形式，添加前后列数据，用于记录到txt或json
+    """将传入的数据转换为列表或字典形式，添加前后列数据
     :param recorder: BaseRecorder对象
     :param data: 要处理的数据
     :return: 转变成列表或字典形式的数据
     """
+    if data is None:
+        data = tuple()
+
+    elif not isinstance(data, (list, tuple, dict)):
+        data = (data,)
+
+    if not (recorder.before or recorder.after):
+        return data
+
     if isinstance(data, (list, tuple)):
-        return recorder._data_to_list(data)
+        return_list = []
+        for i in (recorder.before, data, recorder.after):
+            if isinstance(i, dict):
+                return_list.extend(list(i.values()))
+            elif i is None:
+                pass
+            elif isinstance(i, list):
+                return_list.extend(i)
+            elif isinstance(i, tuple):
+                return_list.extend(list(i))
+            else:
+                return_list.extend([str(i)])
+
+        return return_list
 
     elif isinstance(data, dict):
         if isinstance(recorder.before, dict):

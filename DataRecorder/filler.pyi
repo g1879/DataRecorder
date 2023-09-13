@@ -20,9 +20,9 @@ class Filler(BaseRecorder):
     _delimiter: str = ...
     _data: Union[list, dict] = ...
     data: Union[list, dict] = ...
+    row_num_title: str = ...
 
-    def __init__(self,
-                 path: Optional[str, Path] = None,
+    def __init__(self, path: Optional[str, Path] = None,
                  cache_size: int = None,
                  key_cols: Union[str, int, list, tuple, bool] = True,
                  begin_row: int = 2,
@@ -53,6 +53,9 @@ class Filler(BaseRecorder):
     def keys(self) -> list: ...
 
     @property
+    def dict_keys(self) -> List[dict]: ...
+
+    @property
     def set(self) -> FillerSetter: ...
 
     @property
@@ -67,7 +70,7 @@ class Filler(BaseRecorder):
 
     def set_link(self,
                  coord: Union[int, str, tuple, list],
-                 link: str,
+                 link: Optional[str],
                  content: Optional[int, str, float] = None) -> None: ...
 
     def set_style(self, coord: Union[int, str, tuple, list], style: Optional[CellStyle],
@@ -85,3 +88,9 @@ class Filler(BaseRecorder):
     def _to_xlsx(self) -> None: ...
 
     def _to_csv(self) -> None: ...
+
+
+def get_xlsx_keys(filler: Filler, as_dict: bool) -> List[Union[list, dict]]: ...
+
+
+def get_csv_keys(filler: Filler, as_dict: bool) -> List[Union[list, dict]]: ...

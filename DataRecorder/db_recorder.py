@@ -1,10 +1,11 @@
 # -*- coding:utf-8 -*-
+from pathlib import Path
 from sqlite3 import connect
 from time import sleep
 
 from .base import BaseRecorder
 from .setter import DBSetter
-from .tools import data_to_list_or_dict
+from .tools import data_to_list_or_dict, ok_list
 
 
 class DBRecorder(BaseRecorder):
@@ -51,13 +52,18 @@ class DBRecorder(BaseRecorder):
         if not isinstance(data, (list, tuple, dict)):
             data = (data,)
 
-        # 一维数组
-        if (isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))) or isinstance(data, dict):
+        if not data:
+            self._data.setdefault(table, []).append(tuple())
             self._data_count += 1
-            self._data.setdefault(table, []).append(data)
+
+        # 一维数组
+        elif isinstance(data, dict) or (
+                isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))):
+            self._data.setdefault(table, []).append(data_to_list_or_dict(self, data))
+            self._data_count += 1
 
         else:  # 二维数组
-            self._data.setdefault(table, []).extend(data)
+            self._data.setdefault(table, []).extend([data_to_list_or_dict(self, d) for d in data])
             self._data_count += len(data)
 
         if 0 < self.cache_size <= self._data_count:
@@ -77,7 +83,10 @@ class DBRecorder(BaseRecorder):
         return r
 
     def _connect(self):
-        """链接数据库"""
+        """连接数据库"""
+        path = Path(self.path).parent
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
         self._conn = connect(self.path)
         self._cur = self._conn.cursor()
 
@@ -104,7 +113,7 @@ class DBRecorder(BaseRecorder):
 
             question_masks = ','.join('?' * len(keys))
             keys_txt = ','.join(keys)
-            values = [list(i.values()) for i in data_list]
+            values = [ok_list(i.values()) for i in data_list]
             sql = f'INSERT INTO {table} ({keys_txt}) values ({question_masks})'
 
         else:
@@ -133,7 +142,6 @@ class DBRecorder(BaseRecorder):
             for d in data:
                 if isinstance(d, dict):
                     tmp_keys = d.keys()
-                    d = data_to_list_or_dict(self, d)
                     if table not in tables:
                         keys = d.keys()
                         self._cur.execute(f"CREATE TABLE {table} ({','.join(keys)})")
@@ -143,7 +151,12 @@ class DBRecorder(BaseRecorder):
                     if table not in tables:
                         raise TypeError('新建表格首次须接收数据需为dict格式。')
                     tmp_keys = len(d)
-                    d = self._data_to_list(d, len(tables[table]))
+                    long = len(tables[table])
+                    if long > tmp_keys:
+                        d = ok_list(d)
+                        d.extend([None] * (long - tmp_keys))
+                    elif long < tmp_keys:
+                        raise RuntimeError('数据个数大于列数（注意before和after属性）。')
 
                 if tmp_keys != curr_keys:
                     self._to_database(data_list, table, tables)

@@ -53,10 +53,8 @@ class BaseSetter(OriginalSetter):
         :param before: 列表、元组或字符串，为字符串时则补充一列
         :return: None
         """
-        self._recorder.record()
-
         if before is None:
-            self._recorder._before = []
+            self._recorder._before = None
         elif isinstance(before, (list, dict)):
             self._recorder._before = before
         elif isinstance(before, tuple):
@@ -69,10 +67,8 @@ class BaseSetter(OriginalSetter):
         :param after: 列表、元组或字符串，为字符串时则补充一列
         :return: None
         """
-        self._recorder.record()
-
         if after is None:
-            self._recorder._after = []
+            self._recorder._after = None
         elif isinstance(after, (list, dict)):
             self._recorder._after = after
         elif isinstance(after, tuple):
@@ -89,16 +85,20 @@ class BaseSetter(OriginalSetter):
 
 
 class SheetLikeSetter(BaseSetter):
-    def head(self, head):
+    def head(self, head, table=None):
         """设置表头。只有 csv 和 xlsx 格式支持设置表头
         :param head: 表头，列表或元组
+        :param table: 表名，只xlsx格式文件有效
         :return: None
         """
-        if not self._recorder.path or not Path(self._recorder.path).exists():
-            raise FileNotFoundError('未指定文件或文件不存在。')
+        if not self._recorder.path:
+            raise FileNotFoundError('未指定文件。')
+        if not isinstance(head, (list, tuple)):
+            raise TypeError('head参数只能是list或tuple格式。')
 
         if self._recorder.type == 'xlsx':
-            set_xlsx_head(self._recorder.path, head, self._recorder.table)
+            table = table or self._recorder.table
+            set_xlsx_head(self._recorder.path, head, table)
 
         elif self._recorder.type == 'csv':
             set_csv_head(self._recorder.path, head, self._recorder.encoding, self._recorder.delimiter,
@@ -249,6 +249,13 @@ class FillerSetter(SheetLikeSetter):
         """
         self._recorder._link_style = style
 
+    def row_num_title(self, title):
+        """设置dict_keys返回的数据中，行号的键名
+        :param title: 行号标题
+        :return: None
+        """
+        self._recorder.row_num_title = title
+
 
 class RecorderSetter(SheetLikeSetter):
     def follow_styles(self, on_off=True):
@@ -280,6 +287,32 @@ class RecorderSetter(SheetLikeSetter):
         """
         super().path(path=path, file_type=file_type)
         self._recorder._row_styles = None
+        self._recorder._head = {} if self._recorder.type == 'xlsx' else None
+
+    def head(self, head, table=None):
+        """设置表头。只有 csv 和 xlsx 格式支持设置表头
+        :param head: 表头，列表或元组
+        :param table: 表名，只xlsx格式文件有效
+        :return: None
+        """
+        super().head(head, table)
+        if self._recorder.type == 'xlsx':
+            if not self._recorder._head or not isinstance(self._recorder._head, dict):
+                self._recorder._head = {table: head}
+            else:
+                self._recorder._head[table] = head
+
+        elif self._recorder.type == 'csv':
+            self._recorder._head = head
+
+    def fit_head(self, on_off=True):
+        """设置是否自动匹配表头
+        :param on_off: bool表示开关
+        :return: None
+        """
+        if self._recorder.type not in ('csv', 'xlsx'):
+            raise TypeError('只有csv或xlsx格式可设置fit_head。')
+        self._recorder._fit_head = on_off
 
 
 class DBSetter(BaseSetter):
@@ -350,6 +383,10 @@ def set_xlsx_head(file_path, head, table):
         ws = wb.active
         if table:
             ws.title = table
+
+    if len(ws[1]) > len(head):
+        head = list(head)
+        head.extend([None] * (len(ws[1]) - len(head)))
 
     for key, i in enumerate(head, 1):
         ws.cell(1, key).value = process_content(i, True)

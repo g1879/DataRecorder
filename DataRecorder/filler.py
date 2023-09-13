@@ -2,20 +2,19 @@
 from csv import reader as csv_reader, writer as csv_writer
 from pathlib import Path
 from time import sleep
-from typing import Union, List
 
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
 
 from .base import BaseRecorder
-from .style.cell_style import CellStyle, NoneStyle
 from .setter import FillerSetter
-from .tools import parse_coord, get_usable_coord, process_content
+from .style.cell_style import CellStyle, NoneStyle
+from .tools import parse_coord, get_usable_coord, process_content, data_to_list_or_dict
 
 
 class Filler(BaseRecorder):
     def __init__(self, path=None, cache_size=None, key_cols=True, begin_row=2,
-                 sign_col=True, data_col=None, sign=None, deny_sign=False) -> None:
+                 sign_col=True, data_col=None, sign=None, deny_sign=False):
         """用于处理表格文件的工具
         :param path: 保存的文件路径
         :param cache_size: 每接收多少条记录写入文件，传入0表示不自动保存
@@ -35,6 +34,7 @@ class Filler(BaseRecorder):
         self._data_col = None
         self._sign = None
         self._deny_sign = False
+        self.row_num_title = 'row'
         if not data_col:
             data_col = sign_col if sign_col else 1
         self.set.path(path, key_cols, begin_row, sign_col, data_col, sign, deny_sign)
@@ -82,11 +82,23 @@ class Filler(BaseRecorder):
             raise FileNotFoundError('未指定文件或文件不存在。')
 
         if self.type == 'csv':
-            return _get_csv_keys(self.path, self.begin_row, self.sign_col, self.sign, self.key_cols, self.encoding,
-                                 self.delimiter, self.quote_char, self.deny_sign)
+            return get_csv_keys(self, False)
         elif self.type == 'xlsx':
-            return _get_xlsx_keys(self.path, self.begin_row, self.sign_col, self.sign,
-                                  self.key_cols, self.deny_sign, self.table)
+            return get_xlsx_keys(self, False)
+
+    @property
+    def dict_keys(self):
+        """返回一个列表，由未执行的行数据组成。每行的格式为dict，'row' 值为行号，其余值为第一行数据。
+        如第一行数据为空，则用列号为值。如果begin_row为1，用列名作为值。
+        eg.{'row': 2, 'name': '张三', 'C': '男'}
+        """
+        if not self.path or not Path(self.path).exists():
+            raise FileNotFoundError('未指定文件或文件不存在。')
+
+        if self.type == 'csv':
+            return get_csv_keys(self, True)
+        elif self.type == 'xlsx':
+            return get_xlsx_keys(self, True)
 
     @property
     def set(self):
@@ -120,11 +132,22 @@ class Filler(BaseRecorder):
         while self._pause_add:  # 等待其它线程写入结束
             sleep(.1)
 
-        if coord not in ('set_link', 'cover_style', 'replace_style', 'set_img', 'set_width', 'set_height'):
-            coord = parse_coord(coord, self.data_col)
-
         if not isinstance(data, (list, tuple)):
             data = (data,)
+
+        if coord not in ('set_link', 'cover_style', 'replace_style', 'set_img', 'set_width', 'set_height'):
+            coord = parse_coord(coord, self.data_col)
+            if not data:
+                data = ([],)
+                self._data_count += 1
+            # 一维数组
+            elif isinstance(data, dict) or (
+                    isinstance(data, (list, tuple)) and not isinstance(data[0], (list, tuple, dict))):
+                data = (data_to_list_or_dict(self, data),)
+                self._data_count += 1
+            else:  # 二维数组
+                data = [data_to_list_or_dict(self, d) for d in data]
+                self._data_count += len(data)
 
         if self._type != 'xlsx':
             self._data.append((coord, data))
@@ -137,28 +160,22 @@ class Filler(BaseRecorder):
 
             self._data.setdefault(table, []).append((coord, data))
 
-        self._data_count += len(data[0]) if isinstance(data[0], (list, tuple, dict)) else 1
-
         if 0 < self.cache_size <= self._data_count:
             self.record()
 
     def set_link(self, coord, link, content=None):
         """为单元格设置超链接
         :param coord: 单元格坐标
-        :param link: 超链接
+        :param link: 超链接，为None时删除链接
         :param content: 单元格内容
         :return: None
         """
-        if not isinstance(link, str):
-            raise TypeError(f'link参数只能是str，不能是{type(link)}。')
-        if not isinstance(content, (int, str, float, type(None))):
-            raise TypeError(f'link参数只能是int、str、float、None，不能是{type(link)}。')
         self.add_data((coord, link, content), 'set_link')
 
     def set_style(self, coord, style, replace=True):
         """为单元格设置样式
         :param coord: 单元格坐标，输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围
-        :param style: CellStyle对象
+        :param style: CellStyle对象，为None则清除单元格样式
         :param replace: 是否直接替换已有样式，运行效率较高，但不能单独修改某个属性
         :return: None
         """
@@ -168,7 +185,7 @@ class Filler(BaseRecorder):
     def set_img(self, coord, img_path, width=None, height=None):
         """
         :param coord: 单元格坐标，输入数字可设置整行，输入列名字符串可设置整列，输入'A1:C5'格式可设置指定范围
-        :param img_path: 图片路径
+        :param img_path: 图片路径，为None则删除现有图片
         :param width: 图片宽
         :param height: 图片高
         :return: None
@@ -242,11 +259,15 @@ class Filler(BaseRecorder):
                     coord = parse_coord(data[1][0], self.data_col)
                     row, col = get_usable_coord(coord, max_row, max_col)
                     cell = ws.cell(row, col)
-                    cell.hyperlink = process_content(data[1][1], True)
+                    has_link = True if cell.hyperlink else Filler
+                    cell.hyperlink = None if data[1][1] is None else process_content(data[1][1], True)
                     if data[1][2] is not None:
                         cell.value = process_content(data[1][2], True)
-                    if self._link_style:
-                        self._link_style.to_cell(cell, replace=False)
+                    if data[1][1]:
+                        if self._link_style:
+                            self._link_style.to_cell(cell, replace=False)
+                    elif has_link:
+                        NoneStyle().to_cell(cell, replace=False)
                     continue
 
                 elif data[0] in ('replace_style', 'cover_style'):
@@ -308,7 +329,9 @@ class Filler(BaseRecorder):
                 now_data = (data[1],) if not isinstance(data[1][0], (list, tuple, dict)) else data[1]
 
                 for r, i in enumerate(now_data, row):
-                    for key, j in enumerate(self._data_to_list(i)):
+                    if isinstance(i, dict):
+                        i = i.values()
+                    for key, j in enumerate(i):
                         ws.cell(r, col + key).value = process_content(j, True)
 
         wb.save(self.path)
@@ -341,7 +364,8 @@ class Filler(BaseRecorder):
                 now_data = (now_data,) if not isinstance(now_data[0], (list, tuple, dict)) else now_data
 
                 for r, data in enumerate(now_data, row):
-                    data = self._data_to_list(data)
+                    if isinstance(data, dict):
+                        data = list(data.values())
 
                     for _ in range(r - lines_count):  # 若行数不够，填充行数
                         lines.append([])
@@ -360,116 +384,141 @@ class Filler(BaseRecorder):
             writer.writerows(lines)
 
 
-def _get_xlsx_keys(path: str,
-                   begin_row: int,
-                   sign_col: Union[int, str, None],
-                   sign: Union[int, float, str],
-                   key_cols: Union[list, tuple],
-                   deny_sign: bool,
-                   table: str) -> List[list]:
+def get_xlsx_keys(filler, as_dict):
     """返回key列内容，第一位为行号，其余为key列的值
+    如果as_dict为True，返回dict格式，value为第一行值，值为空或begin_row为1时用列号，'row' 值为行号
     eg.[3, '名称', 'id']
-    :param path: 文件路径
-    :param begin_row: 数据起始行
-    :param sign_col: 用于判断是否已填数据的列，从1开始
-    :param sign: 按这个值判断是否已填数据
-    :param key_cols: 关键字所在列，可以是多列
-    :return: 关键字组成的列表
+    :param filler: 记录器对象
+    :param as_dict: 是否以dict格式返回数据
+    :return: 关键字组成的列表或字典
     """
-    wb = load_workbook(path, data_only=True, read_only=True)
-    if table and table not in [i.title for i in wb.worksheets]:
-        raise RuntimeError(f'xlsx文件未包含此工作表：{table}')
-    ws = wb[table] if table else wb.active
+    wb = load_workbook(filler.path, data_only=True, read_only=True)
+    if filler.table and filler.table not in [i.title for i in wb.worksheets]:
+        raise RuntimeError(f'xlsx文件未包含此工作表：{filler.table}')
+    ws = wb[filler.table] if filler.table else wb.active
 
     if ws.max_column is None:  # 遇到过read_only时无法获取列数的文件
         wb.close()
-        wb = load_workbook(path, data_only=True)
-        ws = wb[table] if table else wb.active
+        wb = load_workbook(filler.path, data_only=True)
+        ws = wb[filler.table] if filler.table else wb.active
 
     rows = ws.rows
+    if as_dict:
+        title = [filler.row_num_title]
+        if filler.begin_row == 1:
+            t = [get_column_letter(x) for x in range(1, ws.max_column + 1)
+                 if filler.key_cols is True or x in filler.key_cols]
+        else:
+            try:
+                t = next(rows)
+                t = [x.value if x.value else get_column_letter(k) for k, x in enumerate(t, 1)
+                     if filler.key_cols is True or k in filler.key_cols]
+
+            except StopIteration:
+                return []
+
+        if len(t) != len(set(t)):
+            raise RuntimeError('表头出现内容重复。')
+        if filler.row_num_title in t:
+            raise RuntimeError(f'表头"{filler.row_num_title}"列与行号列重复，请用set.row_num_title()方法设置不同的表头。')
+        title.extend(t)
+
     try:
-        for _ in range(begin_row - 1):
+        for _ in range(filler.begin_row - 1):
             next(rows)
     except StopIteration:
         return []
 
-    if sign_col is True or sign_col > ws.max_column:  # 获取所有行
-        if key_cols is True:  # 获取整行
-            res_keys = [[ind] + [i.value for i in row]
-                        for ind, row in enumerate(rows, begin_row)]
+    # ---------------------------------------------------------
+
+    if filler.sign_col is True or filler.sign_col > ws.max_column:  # 获取所有行
+        if filler.key_cols is True:  # 获取整行
+            res = [[ind] + [i.value for i in row]
+                   for ind, row in enumerate(rows, filler.begin_row)]
         else:  # 只获取对应的列
-            res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                        for ind, row in enumerate(rows, begin_row)]
+            res = [[ind] + [row[i - 1].value for i in filler.key_cols]
+                   for ind, row in enumerate(rows, filler.begin_row)]
 
     else:  # 获取符合条件的行
-        if key_cols is True:  # 获取整行
-            if deny_sign:
-                res_keys = [[ind] + [i.value for i in row]
-                            for ind, row in enumerate(rows, begin_row)
-                            if row[sign_col - 1].value != sign]
+        if filler.key_cols is True:  # 获取整行
+            if filler.deny_sign:
+                res = [[ind] + [i.value for i in row]
+                       for ind, row in enumerate(rows, filler.begin_row)
+                       if row[filler.sign_col - 1].value != filler.sign]
             else:
-                res_keys = [[ind] + [i.value for i in row]
-                            for ind, row in enumerate(rows, begin_row)
-                            if row[sign_col - 1].value == sign]
+                res = [[ind] + [i.value for i in row]
+                       for ind, row in enumerate(rows, filler.begin_row)
+                       if row[filler.sign_col - 1].value == filler.sign]
 
         else:  # 只获取对应的列
-            if deny_sign:
-                res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                            for ind, row in enumerate(rows, begin_row)
-                            if row[sign_col - 1].value != sign]
+            if filler.deny_sign:
+                res = [[ind] + [row[i - 1].value for i in filler.key_cols]
+                       for ind, row in enumerate(rows, filler.begin_row)
+                       if row[filler.sign_col - 1].value != filler.sign]
             else:
-                res_keys = [[ind] + [row[i - 1].value for i in key_cols]
-                            for ind, row in enumerate(rows, begin_row)
-                            if row[sign_col - 1].value == sign]
+                res = [[ind] + [row[i - 1].value for i in filler.key_cols]
+                       for ind, row in enumerate(rows, filler.begin_row)
+                       if row[filler.sign_col - 1].value == filler.sign]
 
     wb.close()
-    return res_keys
+
+    if as_dict:
+        res = [dict(zip(title, v)) for v in res]
+    return res
 
 
-def _get_csv_keys(path: str,
-                  begin_row: int,
-                  sign_col: Union[int, str, None],
-                  sign: Union[int, float, str],
-                  key_cols: Union[list, tuple],
-                  encoding: str,
-                  delimiter: str,
-                  quotechar: str,
-                  deny_sign: bool) -> List[list]:
-    """返回key列内容，第一位为行号，其余为key列的值
+def get_csv_keys(filler, as_dict):
+    """返回key列内容，第一位为行号，其余为key列的值，
+    如果as_dict为True，返回dict格式，value为第一行值，值为空或begin_row为1时用列号，'row'值为行号
     eg.[3, '名称', 'id']
-    :param path: 文件路径
-    :param begin_row: 数据起始行
-    :param sign_col: 用于判断是否已填数据的列，从1开始
-    :param sign: 按这个值判断是否已填数据
-    :param key_cols: 关键字所在列，可以是多列
-    :param encoding: 字符编码
-    :param delimiter: 分隔符
-    :param quotechar: 引用符
-    :return: 关键字组成的列表
+    :param filler: 记录器对象
+    :param as_dict: 是否以dict格式返回数据
+    :return: 关键字组成的列表或字典
     """
-    sign = '' if sign is None else str(sign)
+    begin_row = filler.begin_row
+    sign_col = filler.sign_col
+    sign = '' if filler.sign is None else str(filler.sign)
     begin_row -= 1
-    res_keys = []
+    res = []
 
-    with open(path, 'r', encoding=encoding) as f:
-        reader = csv_reader(f, delimiter=delimiter, quotechar=quotechar)
-        lines = list(reader)[begin_row:]
+    with open(filler.path, 'r', encoding=filler.encoding) as f:
+        reader = csv_reader(f, delimiter=filler.delimiter, quotechar=filler.quote_char)
+        lines = list(reader)
+        if not lines:
+            return res
+
+        if as_dict:
+            title = [filler.row_num_title]
+            if filler.begin_row == 1:
+                t = [get_column_letter(x) for x in range(1, len(lines[0]) + 1)
+                     if filler.key_cols is True or x in filler.key_cols]
+            else:
+                t = [x if x else get_column_letter(k) for k, x in enumerate(lines[0], 1)
+                     if filler.key_cols is True or k in filler.key_cols]
+
+            if len(t) != len(set(t)):
+                raise RuntimeError('表头内容重复。')
+            if filler.row_num_title in t:
+                raise RuntimeError(f'表头"{filler.row_num_title}"列与行号列重复，请用set.row_num_title()方法设置不同的表头。')
+            title.extend(t)
 
         if sign_col is not True:  # 获取符合条件的行
             sign_col -= 1
-            for ind, line in enumerate(lines, begin_row + 1):
+            for ind, line in enumerate(lines[begin_row:], begin_row + 1):
                 row_sign = '' if sign_col > len(line) - 1 else line[sign_col]
-                if row_sign != sign if deny_sign else row_sign == sign:
-                    if key_cols is True:  # 获取整行
-                        res_keys.append([ind] + line)
+                if row_sign != sign if filler.deny_sign else row_sign == sign:
+                    if filler.key_cols is True:  # 获取整行
+                        res.append([ind] + line)
                     else:  # 只获取对应的列
-                        res_keys.append([ind] + [line[i - 1] for i in key_cols])
+                        res.append([ind] + [line[i - 1] for i in filler.key_cols])
 
         else:  # 获取所有行
-            for ind, line in enumerate(lines, begin_row + 1):
-                if key_cols is True:  # 获取整行
-                    res_keys.append([ind] + line)
+            for ind, line in enumerate(lines[begin_row:], begin_row + 1):
+                if filler.key_cols is True:  # 获取整行
+                    res.append([ind] + line)
                 else:  # 只获取对应的列
-                    res_keys.append([ind] + [line[i - 1] for i in key_cols])
+                    res.append([ind] + [line[i - 1] for i in filler.key_cols])
 
-    return res_keys
+    if as_dict:
+        res = [dict(zip(title, v)) for v in res]
+    return res
